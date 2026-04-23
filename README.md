@@ -1,76 +1,73 @@
-# DiVeNha Frontend
+# React + TypeScript + Vite
 
-React + Vite frontend cho hệ thống đặt vé xe khách microservice.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Tech Stack
+Currently, two official plugins are available:
 
-| Thư viện          | Mục đích                          |
-|-------------------|-----------------------------------|
-| React 18          | UI framework                      |
-| Vite              | Build tool                        |
-| Tailwind CSS      | Utility CSS                       |
-| Material UI v6    | Component library                 |
-| Framer Motion     | Animations                        |
-| Zustand           | State management                  |
-| TanStack Query v5 | Server state / caching            |
-| React Hook Form   | Form management                   |
-| Yup               | Schema validation                 |
-| Axios             | HTTP client (auto token refresh)  |
-| React Hot Toast   | Notifications                     |
-| Lucide React      | Icons                             |
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Cài đặt
+## React Compiler
 
-```bash
-# 1. Cài dependencies
-npm install
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-# 2. Copy env
-cp .env.example .env.local
-# Sửa các URL cho đúng với backend của bạn
+## Expanding the ESLint configuration
 
-# 3. Chạy dev server
-npm run dev
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Cấu trúc
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```
-src/
-├── pages/
-│   ├── home/         # HomePage
-│   ├── auth/         # Login, Register, Profile, GoogleCallback
-│   ├── booking/      # Search, Seats, Confirm, MyTickets
-│   └── admin/        # AdminDashboard
-├── components/
-│   └── layout/       # MainLayout (Navbar + Footer)
-├── store/            # Zustand (auth + booking state)
-├── services/         # API layer với auto token refresh
-└── index.css         # Global styles + component classes
-```
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## Tích hợp với Backend
-
-Sửa file `.env.local`:
-
-```
-VITE_USER_URL=http://localhost:8090       # User Service
-VITE_ROUTE_URL=http://localhost:8082      # Route Service
-VITE_BOOKING_URL=http://localhost:8083    # Booking Service
-VITE_KEYCLOAK_URL=http://localhost:9098   # Keycloak
-VITE_KEYCLOAK_REALM=micro-services
-VITE_KEYCLOAK_CLIENT=micro-services-api
-```
-
-## Google Login
-
-Thêm vào Keycloak Admin → Clients → `micro-services-api` → Valid redirect URIs:
-```
-http://localhost:3000/auth/google/callback
-```
-
-## Build production
-
-```bash
-npm run build
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
