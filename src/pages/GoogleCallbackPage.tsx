@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { ROUTES } from '../constants/routes';
@@ -17,18 +17,15 @@ export const GoogleCallbackPage: React.FC = () => {
             : '';
     const [error, setError] = useState(immediateError);
 
+    const hasCalled = useRef(false);
+
     useEffect(() => {
-        if (!code || oauthError) {
-            return;
-        }
+        if (!code || oauthError || hasCalled.current) return;
+        hasCalled.current = true; 
 
         loginWithGoogleCode(code)
-            .then(() => {
-                navigate(ROUTES.PROFILE, { replace: true });
-            })
-            .catch(() => {
-                setError('Không thể đăng nhập với Google. Vui lòng thử lại.');
-            });
+            .then(() => navigate(ROUTES.PROFILE, { replace: true }))
+            .catch(() => setError('Không thể đăng nhập với Google. Vui lòng thử lại.'));
     }, [code, loginWithGoogleCode, navigate, oauthError]);
 
     return (
