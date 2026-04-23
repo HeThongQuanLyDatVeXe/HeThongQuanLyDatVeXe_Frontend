@@ -1,11 +1,12 @@
+import { AuthProvider } from './contexts/AuthContext';
+import { AppRouter } from './routers/AppRouter';
+
 function App() {
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-900">
-      <h1 className="text-4xl font-bold text-blue-500">
-        Hello React + Tailwind 🚀
-      </h1>
-    </div>
-  )
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
