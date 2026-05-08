@@ -183,11 +183,11 @@ export default function HomePage() {
         const tokenUser = {
           fullName: normalizeMaybeMojibake(
             jwtPayload?.name ||
-              [jwtPayload?.given_name, jwtPayload?.family_name]
-                .filter(Boolean)
-                .join(" ") ||
-              jwtPayload?.preferred_username ||
-              "",
+            [jwtPayload?.given_name, jwtPayload?.family_name]
+              .filter(Boolean)
+              .join(" ") ||
+            jwtPayload?.preferred_username ||
+            "",
           ),
           email: jwtPayload?.email || "",
           avatarUrl: jwtPayload?.picture || "",
@@ -204,8 +204,7 @@ export default function HomePage() {
         // Call backend sync endpoint and use DB user as source of truth.
         let syncedUser = null;
         try {
-          const USER_BASE =
-            import.meta.env.VITE_USER_URL || "http://localhost:8090";
+          const USER_BASE = import.meta.env.VITE_USER_URL;
           const syncRes = await fetch(`${USER_BASE}/api/v1/auth/google/sync`, {
             method: "POST",
             headers: {
