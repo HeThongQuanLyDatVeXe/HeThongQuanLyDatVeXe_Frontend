@@ -92,14 +92,14 @@ export default function Header() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 8 }}
-                      className="absolute right-0 mt-2 w-48 bg-white text-on-surface rounded-lg shadow-lg py-2 border border-outline-variant"
+                      className="absolute right-0 mt-2 w-48 bg-white text-[#261813] rounded-lg shadow-lg py-2 border border-[#e2bfb2]"
                     >
-                      <Link to="/profile" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-surface-container font-body-md">Hồ sơ</Link>
-                      <Link to="/my-tickets" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-surface-container font-body-md">Vé của tôi</Link>
+                      <Link to="/profile" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-[#ffe9e2] font-body-md">Hồ sơ</Link>
+                      <Link to="/my-tickets" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-[#ffe9e2] font-body-md">Vé của tôi</Link>
                       {isAdminByRoles(user?.roles || []) && (
-                        <Link to="/admin" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-surface-container font-body-md">Quản trị</Link>
+                        <Link to="/admin" onClick={() => setDD(false)} className="block px-4 py-2 hover:bg-[#ffe9e2] font-body-md">Quản trị</Link>
                       )}
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-[#ba1a1a] hover:bg-error-container font-body-md">Đăng xuất</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-[#ba1a1a] hover:bg-[#ffdad6] font-body-md">Đăng xuất</button>
                     </motion.div>
                   )}
                 </AnimatePresence>
