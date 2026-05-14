@@ -21,7 +21,12 @@ export const GoogleCallbackPage: React.FC = () => {
 
     useEffect(() => {
         if (!code || oauthError || hasCalled.current) return;
-        hasCalled.current = true; 
+
+        const handledKey = `oauth-google:${code}`;
+        if (sessionStorage.getItem(handledKey)) return;
+        sessionStorage.setItem(handledKey, '1');
+
+        hasCalled.current = true;
 
         loginWithGoogleCode(code)
             .then(() => navigate(ROUTES.PROFILE, { replace: true }))
