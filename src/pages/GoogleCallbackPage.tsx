@@ -1,8 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { ROUTES } from '../constants/routes';
 import { Alert } from '../components/common/Alert';
+import { cookieUtils } from '../utils/cookieUtils';
+
+const MAX_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 1000;
+const PROCESSED_CODE_KEY = 'google_oauth_processed_code';
 
 export const GoogleCallbackPage: React.FC = () => {
     const { loginWithGoogleCode } = useAuth();
@@ -17,21 +22,50 @@ export const GoogleCallbackPage: React.FC = () => {
             : '';
     const [error, setError] = useState(immediateError);
 
-    const hasCalled = useRef(false);
-
     useEffect(() => {
-        if (!code || oauthError || hasCalled.current) return;
+        if (!code || oauthError) return;
+        const storedCode = window.sessionStorage.getItem(PROCESSED_CODE_KEY);
+        if (storedCode === code && cookieUtils.getAccessToken()) {
+            navigate(ROUTES.PROFILE, { replace: true });
+            return;
+        }
+        console.log('✅ CALLING API - code:', code);
+        console.trace();
 
-        const handledKey = `oauth-google:${code}`;
-        if (sessionStorage.getItem(handledKey)) return;
-        sessionStorage.setItem(handledKey, '1');
+        let isActive = true;
+        let timeoutId: number | undefined;
 
-        hasCalled.current = true;
+        const tryLogin = async (attempt: number) => {
+            try {
+                await loginWithGoogleCode(code);
+                window.sessionStorage.setItem(PROCESSED_CODE_KEY, code);
+                navigate(ROUTES.PROFILE, { replace: true });
+            } catch (err: unknown) {
+                const status = (err as { response?: { status?: number } })?.response?.status;
+                if (status === 503 && attempt < MAX_RETRIES) {
+                    const delay = BASE_RETRY_DELAY_MS * (attempt + 1);
+                    timeoutId = window.setTimeout(() => tryLogin(attempt + 1), delay);
+                    return;
+                }
+                if (status === 400) {
+                    if (isActive) {
+                        setError('Mã xác thực đã hết hạn hoặc đã được dùng. Vui lòng đăng nhập lại.');
+                    }
+                    return;
+                }
+                if (isActive) {
+                    setError('Không thể đăng nhập với Google. Vui lòng thử lại.');
+                }
+            }
+        };
 
-        loginWithGoogleCode(code)
-            .then(() => navigate(ROUTES.PROFILE, { replace: true }))
-            .catch(() => setError('Không thể đăng nhập với Google. Vui lòng thử lại.'));
-    }, [code, loginWithGoogleCode, navigate, oauthError]);
+        void tryLogin(0);
+
+        return () => {
+            isActive = false;
+            if (timeoutId) window.clearTimeout(timeoutId);
+        };
+    }, [code, oauthError, loginWithGoogleCode, navigate]);
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">

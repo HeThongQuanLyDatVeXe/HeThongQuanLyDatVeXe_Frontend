@@ -35,34 +35,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
-  const res = await authService.login({ email, password });
-  const { accessToken, refreshToken } = res.data.result!;
-  
-  console.log('Token nhận được:', accessToken);
-  cookieUtils.setTokens(accessToken, refreshToken);
-  console.log('Token sau khi set:', cookieUtils.getAccessToken()); 
-  
-  await refreshUser();
-};
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await authService.login({ email, password });
+    const { accessToken, refreshToken } = res.data.result!;
+    cookieUtils.setTokens(accessToken, refreshToken);
+    await refreshUser();
+  }, [refreshUser]);
 
-  const loginWithGoogleCode = async (code: string) => {
+  const loginWithGoogleCode = useCallback(async (code: string) => {
     const res = await authService.googleLogin(code);
     const { accessToken, refreshToken } = res.data.result!;
     cookieUtils.setTokens(accessToken, refreshToken);
     await refreshUser();
-  };
+  }, [refreshUser]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     const accessToken = cookieUtils.getAccessToken();
     if (accessToken) {
-      try {
-        await authService.logout({ accessToken });
-      } catch { /* silent */ }
+      try { await authService.logout({ accessToken }); } catch { }
     }
     cookieUtils.clearTokens();
     setUser(null);
-  };
+  }, []);
 
   return (
     <AuthContext.Provider
