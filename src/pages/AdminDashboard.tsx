@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { AdminLayout } from '../components/layouts/AdminLayout';
-import { userService } from '../services/user-service/userService';
+import { adminUserService } from '../services/user-service/adminUserService';
 import type { UserResponse } from '../types/user-service/response/UserResponse';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export const AdminDashboard: React.FC = () => {
   const [period, setPeriod] = useState<Period>('today');
 
   useEffect(() => {
-    userService
+    adminUserService
       .getUsers()
       .then((res) => setUsers(res.data.result ?? []))
       .catch(() => {})

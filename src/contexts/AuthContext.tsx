@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     try {
-      const res = await userService.getMyInfo();
+      const res = await userService.getProfile();
       setUser(res.data.result ?? null);
     } catch {
       setUser(null);
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshUser]);
 
   const loginWithGoogleCode = useCallback(async (code: string) => {
-    const res = await authService.googleLogin(code);
+    const res = await authService.oauthLogin('google', code);
     const { accessToken, refreshToken } = res.data.result!;
     cookieUtils.setTokens(accessToken, refreshToken);
     await refreshUser();

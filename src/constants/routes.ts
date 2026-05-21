@@ -21,4 +21,7 @@ export const ROUTES = {
   ADMIN_USERS: '/admin/users',
   ADMIN_ROLES: '/admin/roles',
   ADMIN_PERMISSIONS: '/admin/permissions',
+  ADMIN_ROUTES: '/admin/routes',
+  ADMIN_CITIES: '/admin/cities',
+  ADMIN_POINTS: '/admin/points',
 } as const;

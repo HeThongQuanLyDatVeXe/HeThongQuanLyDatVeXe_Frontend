@@ -11,6 +11,9 @@ import { AdminDashboard } from '../pages/AdminDashboard';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { AdminRolesPage } from '../pages/AdminRolesPage';
 import { AdminPermissionsPage } from '../pages/AdminPermissionsPage';
+import { AdminRoutesPage } from '../pages/admin-routes/AdminRoutesPage';
+import { AdminCitiesPage } from '../pages/admin-routes/AdminCitiesPage';
+import { AdminPointsPage } from '../pages/admin-routes/AdminPointsPage';
 import { GoogleCallbackPage } from '../pages/GoogleCallbackPage';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { TripDetailPage } from '../pages/TripDetailPage';
@@ -148,6 +151,33 @@ export const AppRouter: React.FC = () => {
                     element={(
                         <AdminRoute>
                             <AdminPermissionsPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_ROUTES}
+                    element={(
+                        <AdminRoute>
+                            <AdminRoutesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_CITIES}
+                    element={(
+                        <AdminRoute>
+                            <AdminCitiesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_POINTS}
+                    element={(
+                        <AdminRoute>
+                            <AdminPointsPage />
                         </AdminRoute>
                     )}
                 />

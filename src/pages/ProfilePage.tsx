@@ -76,6 +76,7 @@ export const ProfilePage: React.FC = () => {
     avatarUrl:   user?.avatarUrl   ?? '',
   });
   const [infoLoading, setInfoLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [infoMsg,     setInfoMsg]     = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // ── Password form state ──
@@ -85,12 +86,32 @@ export const ProfilePage: React.FC = () => {
 
   // ── Handlers ──
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setInfoMsg(null);
+    try {
+      const res = await userService.uploadAvatar(file);
+      setInfoData((p) => ({ ...p, avatarUrl: res.data.result ?? '' }));
+      // Cập nhật AuthContext ngay lập tức để Header và các component khác hiển thị ảnh mới
+      await refreshUser();
+      setInfoMsg({ type: 'success', text: 'Tải ảnh lên thành công!' });
+    } catch {
+      setInfoMsg({ type: 'error', text: 'Lỗi tải ảnh lên. Vui lòng thử lại.' });
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleInfoSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setInfoLoading(true);
     setInfoMsg(null);
     try {
-      await userService.updateMyInfo({
+      await userService.updateProfile({
         fullName:    infoData.fullName,
         phoneNumber: infoData.phoneNumber || undefined,
         dateOfBirth: infoData.dateOfBirth || undefined,
@@ -119,7 +140,7 @@ export const ProfilePage: React.FC = () => {
     setPwLoading(true);
     setPwMsg(null);
     try {
-      await authService.changePassword({ oldPassword: pwData.oldPassword, newPassword: pwData.newPassword });
+      await userService.changePassword({ oldPassword: pwData.oldPassword, newPassword: pwData.newPassword });
       setPwMsg({ type: 'success', text: 'Đổi mật khẩu thành công!' });
       setPwData({ oldPassword: '', newPassword: '', confirm: '' });
     } catch (err: unknown) {
@@ -457,24 +478,36 @@ export const ProfilePage: React.FC = () => {
                         </select>
                       </div>
 
-                      {/* Avatar URL */}
+                      {/* Avatar Upload */}
                       <div>
-                        <FieldLabel>Avatar URL</FieldLabel>
-                        <input
-                          type="url"
-                          className={INPUT_BASE}
-                          style={inputStyle}
-                          placeholder="https://..."
-                          value={infoData.avatarUrl}
-                          onChange={(e) => setInfoData((p) => ({ ...p, avatarUrl: e.target.value }))}
-                          onFocus={(e) => {
-                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
-                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
-                          }}
-                          onBlur={(e) => {
-                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
-                          }}
-                        />
+                        <FieldLabel>Ảnh đại diện (Avatar)</FieldLabel>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="avatar-upload"
+                            className="hidden"
+                            onChange={handleAvatarUpload}
+                          />
+                          <label
+                            htmlFor="avatar-upload"
+                            className="cursor-pointer px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+                            style={{
+                              backgroundColor: 'var(--color-secondary-container)',
+                              color: 'var(--color-on-secondary-container)',
+                              border: '1px solid var(--color-outline-variant)'
+                            }}
+                          >
+                            {avatarUploading ? 'Đang tải...' : 'Chọn file ảnh'}
+                          </label>
+                          
+                          {/* Preview selected image if any */}
+                          {infoData.avatarUrl && (
+                            <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200">
+                              <img src={infoData.avatarUrl} alt="Avatar preview" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Submit */}

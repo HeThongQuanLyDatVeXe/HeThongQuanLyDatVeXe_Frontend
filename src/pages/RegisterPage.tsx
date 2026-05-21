@@ -128,7 +128,7 @@ export const RegisterPage: React.FC = () => {
     setFormLoading(true);
     setFormError('');
     try {
-      await authService.initiateRegistration({
+      await authService.register({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
@@ -183,7 +183,7 @@ export const RegisterPage: React.FC = () => {
     setOtpLoading(true);
     setOtpError('');
     try {
-      await authService.verifyAndCreateUser({ email: formData.email, otpCode: code });
+      await authService.verifyOtp({ email: formData.email, otpCode: code, purpose: 'EMAIL_VERIFY' });
       navigate(ROUTES.LOGIN + '?registered=1');
     } catch (err: unknown) {
       const code2 = getApiErrorCode(err);

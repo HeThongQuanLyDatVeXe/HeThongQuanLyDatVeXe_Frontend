@@ -27,7 +27,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Quản lý vận hành',
     items: [
-      { label: 'Tuyến đường',  path: '#',                    icon: 'route' },
+      { label: 'Tuyến đường',  path: ROUTES.ADMIN_ROUTES,    icon: 'route' },
+      { label: 'Thành phố',    path: ROUTES.ADMIN_CITIES,    icon: 'location_city' },
+      { label: 'Điểm dừng',    path: ROUTES.ADMIN_POINTS,    icon: 'location_on' },
       { label: 'Lịch trình',   path: '#',                    icon: 'calendar_month' },
       { label: 'Vé',           path: '#',                    icon: 'confirmation_number' },
       { label: 'Xe',           path: '#',                    icon: 'directions_bus' },

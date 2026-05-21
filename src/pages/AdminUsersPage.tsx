@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { userService } from '../services/user-service/userService';
+import { adminUserService } from '../services/user-service/adminUserService';
 import { AdminLayout } from '../components/layouts/AdminLayout';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { Alert } from '../components/common/Alert';
 import type { UserResponse } from '../types/user-service/response/UserResponse';
-import type { UserUpdateRequest } from '../types/user-service/request/UserUpdateRequest';
+import type { UserStatus } from '../types/user-service/enums';
 
 export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editUser, setEditUser] = useState<UserResponse | null>(null);
-  const [editData, setEditData] = useState<UserUpdateRequest>({});
+  const [editStatus, setEditStatus] = useState<UserStatus>('ACTIVE');
   const [editLoading, setEditLoading] = useState(false);
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
@@ -22,7 +22,7 @@ export const AdminUsersPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await userService.getUsers();
+      const res = await adminUserService.getUsers();
       setUsers(res.data.result ?? []);
     } catch {
       setUsers([]);
@@ -42,7 +42,7 @@ export const AdminUsersPage: React.FC = () => {
 
   const openEdit = (u: UserResponse) => {
     setEditUser(u);
-    setEditData({ fullName: u.fullName, phoneNumber: u.phoneNumber, dateOfBirth: u.dateOfBirth, gender: u.gender });
+    setEditStatus(u.status);
     setEditMsg(null);
   };
 
@@ -51,7 +51,7 @@ export const AdminUsersPage: React.FC = () => {
     setEditLoading(true);
     setEditMsg(null);
     try {
-      await userService.updateUser(editUser.id, editData);
+      await adminUserService.updateUserStatus(editUser.id, { status: editStatus });
       await fetchUsers();
       setEditMsg({ type: 'success', text: 'Cập nhật thành công!' });
       setTimeout(() => setEditUser(null), 800);
@@ -66,7 +66,7 @@ export const AdminUsersPage: React.FC = () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await userService.deleteUser(deleteTarget.id);
+      await adminUserService.deleteUser(deleteTarget.id);
       await fetchUsers();
       setDeleteTarget(null);
     } catch {
@@ -142,7 +142,7 @@ export const AdminUsersPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openEdit(u)} className="text-xs text-amber-600 hover:underline font-medium">Sửa</button>
+                        <button onClick={() => openEdit(u)} className="text-xs text-amber-600 hover:underline font-medium">Đổi trạng thái</button>
                         <button onClick={() => setDeleteTarget(u)} className="text-xs text-red-500 hover:underline font-medium">Xóa</button>
                       </div>
                     </td>
@@ -158,12 +158,19 @@ export const AdminUsersPage: React.FC = () => {
       </div>
 
       {/* Edit modal */}
-      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Chỉnh sửa người dùng">
+      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Chỉnh sửa trạng thái">
         {editMsg && <div className="mb-4"><Alert type={editMsg.type} message={editMsg.text} /></div>}
         <div className="flex flex-col gap-4">
-          <Input label="Họ và tên" value={editData.fullName ?? ''} onChange={(e) => setEditData((p) => ({ ...p, fullName: e.target.value }))} />
-          <Input label="Số điện thoại" value={editData.phoneNumber ?? ''} onChange={(e) => setEditData((p) => ({ ...p, phoneNumber: e.target.value }))} />
-          <Input label="Ngày sinh" type="date" value={editData.dateOfBirth ?? ''} onChange={(e) => setEditData((p) => ({ ...p, dateOfBirth: e.target.value }))} />
+          <p className="text-sm text-slate-600">Thay đổi trạng thái cho người dùng <strong>{editUser?.fullName}</strong>:</p>
+          <select 
+            value={editStatus} 
+            onChange={(e) => setEditStatus(e.target.value as UserStatus)}
+            className="w-full h-[48px] bg-transparent border border-outline-variant/60 rounded-lg px-4 py-3 outline-none focus:border-primary-hover"
+          >
+            <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+            <option value="INACTIVE">Chưa kích hoạt (INACTIVE)</option>
+            <option value="BANNED">Khóa (BANNED)</option>
+          </select>
           <div className="flex gap-3 mt-2">
             <Button variant="ghost" onClick={() => setEditUser(null)} className="flex-1">Hủy</Button>
             <Button loading={editLoading} onClick={handleSaveEdit} className="flex-1">Lưu</Button>
