@@ -8,6 +8,7 @@ export const ROUTES = {
   BOOKING_SUCCESSFUL: '/tuyen-duong/:id/dat-cho-thanh-cong',
   LOGIN: '/login',
   REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
   GOOGLE_CALLBACK: '/auth/google/callback',
   VERIFY_EMAIL: '/verify-email',
 

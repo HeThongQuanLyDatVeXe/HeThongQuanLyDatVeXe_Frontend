@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { routeService } from '../../services/route-service/routeService';
 import { adminRouteService } from '../../services/route-service/adminRouteService';
 import { AdminLayout } from '../../components/layouts/AdminLayout';
+import { useToast } from '../../contexts/ToastContext';
 import type { PointResponse, CityResponse } from '../../types/route-service/response';
 
 export const AdminPointsPage: React.FC = () => {
+  const { success, error: showError } = useToast();
   const [activeTab, setActiveTab] = useState<'PICKUP' | 'DROPOFF'>('PICKUP');
   const [points, setPoints] = useState<PointResponse[]>([]);
   const [cities, setCities] = useState<CityResponse[]>([]);
@@ -80,9 +82,10 @@ export const AdminPointsPage: React.FC = () => {
         else await adminRouteService.createDropoffPoint(formData);
       }
       closeModal();
+      success(editingPoint ? 'Cập nhật điểm dừng thành công' : 'Thêm điểm dừng thành công');
       fetchPoints();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+      showError(err.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -91,9 +94,10 @@ export const AdminPointsPage: React.FC = () => {
     try {
       if (activeTab === 'PICKUP') await adminRouteService.deletePickupPoint(id);
       else await adminRouteService.deleteDropoffPoint(id);
+      success('Đã xóa điểm dừng');
       fetchPoints();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể xóa điểm này');
+      showError(err.response?.data?.message || 'Không thể xóa điểm này');
     }
   };
 

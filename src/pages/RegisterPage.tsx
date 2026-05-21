@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/user-service/authService';
 import { ROUTES } from '../constants/routes';
-import { Alert } from '../components/common/Alert';
 import { getApiErrorCode } from '../utils/errorUtils';
+import { useToast } from '../contexts/ToastContext';
 import loginBgImage from '../assets/login1.jpg';
 
 type Step = 'form' | 'otp';
@@ -70,6 +70,7 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const { success, error: showError, warning } = useToast();
   const [step, setStep] = useState<Step>('form');
 
   // Form state
@@ -82,7 +83,6 @@ export const RegisterPage: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState('');
 
   // OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -113,8 +113,11 @@ export const RegisterPage: React.FC = () => {
     const errors: Record<string, string> = {};
     if (!formData.fullName.trim()) errors.fullName = 'Vui lòng nhập họ tên';
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.email = 'Email không hợp lệ';
-    if (formData.password.length < 8) errors.password = 'Mật khẩu ít nhất 8 ký tự';
+    if (formData.password.length < 8) errors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
     if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Mật khẩu không khớp';
+    if (formData.phoneNumber && !formData.phoneNumber.match(/(84|0[3|5|7|8|9])+([0-9]{8})\b/)) {
+      errors.phoneNumber = 'Số điện thoại không hợp lệ (gồm 10 số, bắt đầu bằng 0)';
+    }
     return errors;
   };
 
@@ -123,10 +126,10 @@ export const RegisterPage: React.FC = () => {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      warning('Vui lòng kiểm tra lại thông tin nhập vào');
       return;
     }
     setFormLoading(true);
-    setFormError('');
     try {
       await authService.register({
         email: formData.email,
@@ -136,10 +139,15 @@ export const RegisterPage: React.FC = () => {
       });
       setStep('otp');
       startResendCooldown();
+      success('Đăng ký thành công! Vui lòng kiểm tra email để lấy mã OTP.');
     } catch (err: unknown) {
       const code = getApiErrorCode(err);
-      if (code === 1002) setFormError('Email này đã được đăng ký.');
-      else setFormError('Đã có lỗi xảy ra. Vui lòng thử lại.');
+      if (code === 1002) showError('Email này đã được sử dụng.');
+      else if (code === 1003) showError('Số điện thoại này đã được sử dụng.');
+      else if (code === 1004) showError('Mật khẩu không hợp lệ.');
+      else if (code === 1008) showError('Định dạng email không hợp lệ.');
+      else if (code === 1009) showError('Định dạng số điện thoại không hợp lệ.');
+      else showError('Đã có lỗi xảy ra. Vui lòng thử lại.');
     } finally {
       setFormLoading(false);
     }
@@ -184,7 +192,8 @@ export const RegisterPage: React.FC = () => {
     setOtpError('');
     try {
       await authService.verifyOtp({ email: formData.email, otpCode: code, purpose: 'EMAIL_VERIFY' });
-      navigate(ROUTES.LOGIN + '?registered=1');
+      success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
+      navigate(ROUTES.LOGIN);
     } catch (err: unknown) {
       const code2 = getApiErrorCode(err);
       if (code2 === 1011) setOtpError('Mã OTP đã hết hạn. Vui lòng gửi lại.');
@@ -287,8 +296,6 @@ export const RegisterPage: React.FC = () => {
                     Tạo tài khoản để cùng chúng tôi lưu giữ kỷ niệm.
                   </p>
                 </header>
-
-                {formError && <div className="mb-6"><Alert type="error" message={formError} /></div>}
 
                 <form onSubmit={handleSubmitForm} className="space-y-4">
                   <FloatingInput
@@ -432,7 +439,7 @@ export const RegisterPage: React.FC = () => {
                 </p>
               </header>
 
-              {otpError && <div className="mb-6"><Alert type="error" message={otpError} /></div>}
+              {otpError && <div className="mb-6"><div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium">{otpError}</div></div>}
 
               <form onSubmit={handleVerify} className="space-y-6">
                 <div className="flex gap-2.5 justify-between">

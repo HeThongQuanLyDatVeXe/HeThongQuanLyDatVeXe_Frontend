@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { routeService } from '../../services/route-service/routeService';
 import { adminRouteService } from '../../services/route-service/adminRouteService';
 import { AdminLayout } from '../../components/layouts/AdminLayout';
+import { useToast } from '../../contexts/ToastContext';
 import type { RouteResponse, CityResponse, RouteStatus } from '../../types/route-service/response';
 import type { CreateRouteRequest, UpdateRouteStatusRequest } from '../../types/route-service/request';
 
 export const AdminRoutesPage: React.FC = () => {
+  const { success, error: showError, warning } = useToast();
   const [routes, setRoutes] = useState<RouteResponse[]>([]);
   const [cities, setCities] = useState<CityResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -86,7 +88,7 @@ export const AdminRoutesPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.originCityId === formData.destinationCityId) {
-      alert('Điểm đi và điểm đến không được trùng nhau');
+      warning('Điểm đi và điểm đến không được trùng nhau');
       return;
     }
     try {
@@ -96,9 +98,10 @@ export const AdminRoutesPage: React.FC = () => {
         await adminRouteService.createRoute(formData);
       }
       closeModal();
+      success(editingRoute ? 'Cập nhật tuyến đường thành công' : 'Thêm tuyến đường thành công');
       fetchRoutes(page);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+      showError(err.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -106,9 +109,10 @@ export const AdminRoutesPage: React.FC = () => {
     if (!window.confirm('Xóa tuyến đường này?')) return;
     try {
       await adminRouteService.deleteRoute(id);
+      success('Đã xóa tuyến đường');
       fetchRoutes(page);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể xóa tuyến đường');
+      showError(err.response?.data?.message || 'Không thể xóa tuyến đường');
     }
   };
 
@@ -117,9 +121,10 @@ export const AdminRoutesPage: React.FC = () => {
     if (!window.confirm(`Đổi trạng thái thành ${newStatus}?`)) return;
     try {
       await adminRouteService.updateRouteStatus(route.id, { status: newStatus });
+      success('Cập nhật trạng thái thành công');
       fetchRoutes(page);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể cập nhật trạng thái');
+      showError(err.response?.data?.message || 'Không thể cập nhật trạng thái');
     }
   };
 

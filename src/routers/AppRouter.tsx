@@ -5,6 +5,7 @@ import { LandingPage } from '../pages/LandingPage';
 import { RoutesPage } from '../pages/RoutesPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { AdminLoginPage } from '../pages/AdminLoginPage';
 import { AdminDashboard } from '../pages/AdminDashboard';
@@ -94,6 +95,15 @@ export const AppRouter: React.FC = () => {
                     element={(
                         <PublicOnlyRoute>
                             <RegisterPage />
+                        </PublicOnlyRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.FORGOT_PASSWORD}
+                    element={(
+                        <PublicOnlyRoute>
+                            <ForgotPasswordPage />
                         </PublicOnlyRoute>
                     )}
                 />

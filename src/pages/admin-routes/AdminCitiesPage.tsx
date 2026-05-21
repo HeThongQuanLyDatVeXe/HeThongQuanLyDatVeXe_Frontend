@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { routeService } from '../../services/route-service/routeService';
 import { adminRouteService } from '../../services/route-service/adminRouteService';
 import { AdminLayout } from '../../components/layouts/AdminLayout';
+import { useToast } from '../../contexts/ToastContext';
 import type { CityResponse } from '../../types/route-service/response';
 
 export const AdminCitiesPage: React.FC = () => {
+  const { success, error: showError } = useToast();
   const [cities, setCities] = useState<CityResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,9 +59,10 @@ export const AdminCitiesPage: React.FC = () => {
         await adminRouteService.createCity(formData);
       }
       closeModal();
+      success(editingCity ? 'Cập nhật thành phố thành công' : 'Thêm thành phố thành công');
       fetchCities();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+      showError(err.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -67,9 +70,10 @@ export const AdminCitiesPage: React.FC = () => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa thành phố này?')) return;
     try {
       await adminRouteService.deleteCity(id);
+      success('Đã xóa thành phố');
       fetchCities();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể xóa thành phố');
+      showError(err.response?.data?.message || 'Không thể xóa thành phố');
     }
   };
 

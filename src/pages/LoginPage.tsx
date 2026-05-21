@@ -230,9 +230,9 @@ export const LoginPage: React.FC = () => {
                     Ghi nhớ tôi
                   </span>
                 </label>
-                <a href="#" className="text-sm font-semibold text-primary-hover hover:underline transition-all">
+                <Link to={ROUTES.FORGOT_PASSWORD} className="text-sm font-semibold text-primary-hover hover:underline transition-all">
                   Quên mật khẩu?
-                </a>
+                </Link>
               </div>
 
               <button
