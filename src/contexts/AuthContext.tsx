@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     const accessToken = cookieUtils.getAccessToken();
     if (accessToken) {
-      try { await authService.logout({ accessToken }); } catch { }
+      try { await authService.logout({ accessToken }); } catch { /* ignore error */ }
     }
     cookieUtils.clearTokens();
     setUser(null);

@@ -1,34 +1,89 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { userService } from '../services/user-service/userService';
 import { authService } from '../services/user-service/authService';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
-import { Input } from '../components/common/Input';
-import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
 import type { Gender } from '../types/user-service/enums';
 import { getApiErrorCode } from '../utils/errorUtils';
+import { ROUTES } from '../constants/routes';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type SidebarSection = 'info' | 'history' | 'promos' | 'password';
+
+interface SidebarItem {
+  key: SidebarSection;
+  label: string;
+  icon: string;
+}
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+const SIDEBAR_ITEMS: SidebarItem[] = [
+  { key: 'info',     label: 'Thông tin cá nhân',  icon: 'person' },
+  { key: 'history',  label: 'Lịch sử đặt vé',    icon: 'confirmation_number' },
+  { key: 'promos',   label: 'Ưu đãi của tôi',    icon: 'loyalty' },
+  { key: 'password', label: 'Đổi mật khẩu',       icon: 'lock' },
+];
+
+// ─── Shared input style ───────────────────────────────────────────────────────
+
+const INPUT_BASE =
+  'w-full rounded-lg p-3 text-sm border transition-all outline-none focus:border-l-4';
+
+const inputStyle: React.CSSProperties = {
+  backgroundColor: 'var(--color-surface-container-low)',
+  borderColor:     'var(--color-outline-variant)',
+  color:           'var(--color-on-surface)',
+};
+
+const inputDisabledStyle: React.CSSProperties = {
+  backgroundColor: 'var(--color-surface-container)',
+  borderColor:     'var(--color-outline-variant)',
+  color:           'var(--color-on-surface)',
+  opacity:         0.65,
+  cursor:          'not-allowed',
+};
+
+// ─── Label component ──────────────────────────────────────────────────────────
+
+const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <label
+    className="block text-xs font-bold uppercase tracking-widest mb-1"
+    style={{ fontFamily: 'Cormorant Garamond, serif', color: 'var(--color-on-surface-variant)' }}
+  >
+    {children}
+  </label>
+);
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export const ProfilePage: React.FC = () => {
-  const { user, refreshUser } = useAuth();
-  const [tab, setTab] = useState<'info' | 'password'>('info');
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
 
-  // Info form
+  const [activeSection, setActiveSection] = useState<SidebarSection>('info');
+
+  // ── Info form state ──
   const [infoData, setInfoData] = useState({
-    fullName: user?.fullName ?? '',
+    fullName:    user?.fullName    ?? '',
     phoneNumber: user?.phoneNumber ?? '',
     dateOfBirth: user?.dateOfBirth ?? '',
-    gender: (user?.gender ?? '') as Gender | '',
-    avatarUrl: user?.avatarUrl ?? '',
+    gender:      (user?.gender     ?? '') as Gender | '',
+    avatarUrl:   user?.avatarUrl   ?? '',
   });
   const [infoLoading, setInfoLoading] = useState(false);
-  const [infoMsg, setInfoMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [infoMsg,     setInfoMsg]     = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Password form
+  // ── Password form state ──
   const [pwData, setPwData] = useState({ oldPassword: '', newPassword: '', confirm: '' });
   const [pwLoading, setPwLoading] = useState(false);
-  const [pwMsg, setPwMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [pwMsg,     setPwMsg]     = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // ── Handlers ──
 
   const handleInfoSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,11 +91,11 @@ export const ProfilePage: React.FC = () => {
     setInfoMsg(null);
     try {
       await userService.updateMyInfo({
-        fullName: infoData.fullName,
+        fullName:    infoData.fullName,
         phoneNumber: infoData.phoneNumber || undefined,
         dateOfBirth: infoData.dateOfBirth || undefined,
-        gender: infoData.gender || undefined,
-        avatarUrl: infoData.avatarUrl || undefined,
+        gender:      infoData.gender      || undefined,
+        avatarUrl:   infoData.avatarUrl   || undefined,
       });
       await refreshUser();
       setInfoMsg({ type: 'success', text: 'Cập nhật thông tin thành công!' });
@@ -76,155 +131,539 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const statusLabel: Record<string, string> = {
-    ACTIVE: 'Hoạt động',
-    BANNED: 'Đã khóa',
-    INACTIVE: 'Không hoạt động',
+  const handleLogout = async () => {
+    await logout();
+    navigate(ROUTES.LOGIN);
   };
 
+  // ── Avatar / initials ──
+  const avatarInitial = user?.fullName?.[0]?.toUpperCase() ?? '?';
+  const isAdmin = user?.roles?.some((r) => r.name.toLowerCase().includes('admin'));
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: 'var(--color-background)' }}
+    >
       <Header />
-      <div className="max-w-4xl mx-auto px-6 pt-28 pb-16">
-        {/* Profile header */}
-        <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-slate-100 flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-            ) : user?.fullName?.[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'Playfair Display, serif' }}>
-              {user?.fullName}
-            </h1>
-            <p className="text-slate-500 text-sm">{user?.email}</p>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                {statusLabel[user?.status ?? 'ACTIVE']}
-              </span>
-              {user?.isEmailVerified && (
-                <span className="text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">✓ Email đã xác minh</span>
-              )}
-              {user?.roles?.map((r) => (
-                <span key={r.id} className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">{r.name}</span>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-100 mb-6 w-fit">
-          {(['info', 'password'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === t ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-800'
-                }`}
-            >
-              {t === 'info' ? 'Thông tin cá nhân' : 'Đổi mật khẩu'}
-            </button>
-          ))}
-        </div>
+      <main
+        className="max-w-[1200px] mx-auto px-6 pt-28 pb-20"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12 items-start">
 
-        {/* Info tab */}
-        {tab === 'info' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <h2 className="text-lg font-semibold text-slate-800 mb-5">Thông tin cá nhân</h2>
-            {infoMsg && <div className="mb-4"><Alert type={infoMsg.type} message={infoMsg.text} /></div>}
-            <form onSubmit={handleInfoSave} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Họ và tên"
-                value={infoData.fullName}
-                onChange={(e) => setInfoData((p) => ({ ...p, fullName: e.target.value }))}
-                required
-              />
-              <Input
-                label="Email"
-                value={user?.email ?? ''}
-                disabled
-                className="opacity-60"
-              />
-              <Input
-                label="Số điện thoại"
-                value={infoData.phoneNumber}
-                onChange={(e) => setInfoData((p) => ({ ...p, phoneNumber: e.target.value }))}
-                placeholder="0901234567"
-              />
-              <Input
-                label="Ngày sinh"
-                type="date"
-                value={infoData.dateOfBirth}
-                onChange={(e) => setInfoData((p) => ({ ...p, dateOfBirth: e.target.value }))}
-              />
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-slate-700">Giới tính</label>
-                <select
-                  value={infoData.gender}
-                  onChange={(e) => setInfoData((p) => ({ ...p, gender: e.target.value as Gender }))}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+          {/* ── Sidebar ── */}
+          <aside className="flex flex-col gap-2">
+            {SIDEBAR_ITEMS.map(({ key, label, icon }) => {
+              const isActive = activeSection === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveSection(key)}
+                  className="flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-medium transition-all text-left"
+                  style={
+                    isActive
+                      ? {
+                          backgroundColor: 'var(--color-primary-container)',
+                          color:           'var(--color-on-primary-container)',
+                        }
+                      : {
+                          color: 'var(--color-on-surface-variant)',
+                        }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!isActive)
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        'var(--color-surface-container-high)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive)
+                      (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                  }}
                 >
-                  <option value="">Không chọn</option>
-                  <option value="MALE">Nam</option>
-                  <option value="FEMALE">Nữ</option>
-                  <option value="OTHER">Khác</option>
-                </select>
-              </div>
-              <Input
-                label="Avatar URL"
-                value={infoData.avatarUrl}
-                onChange={(e) => setInfoData((p) => ({ ...p, avatarUrl: e.target.value }))}
-                placeholder="https://..."
-              />
-              <div className="md:col-span-2 flex justify-end">
-                <Button type="submit" loading={infoLoading}>Lưu thay đổi</Button>
-              </div>
-            </form>
-          </div>
-        )}
+                  <span className="material-symbols-outlined text-xl">{icon}</span>
+                  <span>{label}</span>
+                </button>
+              );
+            })}
 
-        {/* Password tab */}
-        {tab === 'password' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-md">
-            <h2 className="text-lg font-semibold text-slate-800 mb-5">Đổi mật khẩu</h2>
-            {!user?.hasPassword && (
-              <div className="mb-4">
-                <Alert type="info" message="Tài khoản của bạn đăng nhập qua Google. Vui lòng thiết lập mật khẩu lần đầu." />
+            {/* Divider */}
+            <div
+              className="h-px my-1"
+              style={{ backgroundColor: 'var(--color-outline-variant)', opacity: 0.4 }}
+            />
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-medium transition-all text-left"
+              style={{ color: 'var(--color-error)' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#ba1a1a15';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
+            >
+              <span className="material-symbols-outlined text-xl">logout</span>
+              <span>Đăng xuất</span>
+            </button>
+          </aside>
+
+          {/* ── Main Panel ── */}
+          <section className="space-y-6">
+            {/* Profile header card */}
+            <div
+              className="rounded-xl p-8 relative overflow-hidden"
+              style={{
+                backgroundColor: 'var(--color-surface-container-lowest)',
+                border:          '1px solid var(--color-outline-variant)',
+                boxShadow:       '0 8px 20px rgba(92,64,51,0.08)',
+              }}
+            >
+              {/* Decorative circle */}
+              <div
+                className="absolute top-0 right-0 w-56 h-56 rounded-full -translate-y-1/2 translate-x-1/2"
+                style={{ backgroundColor: 'rgba(161,59,0,0.05)' }}
+              />
+
+              <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+                {/* Avatar */}
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0 overflow-hidden"
+                  style={{
+                    backgroundColor: 'var(--color-secondary-container)',
+                    color:           'var(--color-on-secondary-container)',
+                    fontFamily:      'Playfair Display, serif',
+                  }}
+                >
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    avatarInitial
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <h1
+                    className="text-2xl font-semibold mb-1"
+                    style={{ fontFamily: 'Playfair Display, serif', color: 'var(--color-on-surface)' }}
+                  >
+                    {user?.fullName ?? '—'}
+                  </h1>
+                  <p className="text-sm mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>
+                    {user?.email}
+                  </p>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                    {/* Active status */}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Hoạt động
+                    </span>
+
+                    {/* Email verified */}
+                    {user?.isEmailVerified && (
+                      <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">
+                        ✓ Email đã xác minh
+                      </span>
+                    )}
+
+                    {/* Roles */}
+                    {user?.roles?.map((r) => (
+                      <span
+                        key={r.id}
+                        className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                        style={{
+                          backgroundColor: 'var(--color-secondary-fixed)',
+                          color:           'var(--color-on-secondary-fixed)',
+                        }}
+                      >
+                        {r.name}
+                      </span>
+                    ))}
+
+                    {/* Admin badge prominence */}
+                    {isAdmin && (
+                      <span
+                        className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                        style={{ backgroundColor: '#F4600C', color: '#ffffff' }}
+                      >
+                        ⚡ Admin
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-            {pwMsg && <div className="mb-4"><Alert type={pwMsg.type} message={pwMsg.text} /></div>}
-            <form onSubmit={handlePwSave} className="flex flex-col gap-4">
-              {user?.hasPassword && (
-                <Input
-                  label="Mật khẩu hiện tại"
-                  type="password"
-                  placeholder="••••••••"
-                  value={pwData.oldPassword}
-                  onChange={(e) => setPwData((p) => ({ ...p, oldPassword: e.target.value }))}
-                  required
-                />
-              )}
-              <Input
-                label="Mật khẩu mới"
-                type="password"
-                placeholder="Ít nhất 8 ký tự"
-                value={pwData.newPassword}
-                onChange={(e) => setPwData((p) => ({ ...p, newPassword: e.target.value }))}
-                required
+            </div>
+
+            {/* ── Content Card ── */}
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                backgroundColor: 'var(--color-surface-container-lowest)',
+                border:          '1px solid var(--color-outline-variant)',
+                boxShadow:       '0 8px 20px rgba(92,64,51,0.08)',
+              }}
+            >
+              {/* Tab strip */}
+              <div
+                className="flex"
+                style={{ borderBottom: '1px solid var(--color-outline-variant)' }}
+              >
+                {([
+                  { key: 'info',     label: 'Thông tin cá nhân' },
+                  { key: 'password', label: 'Đổi mật khẩu' },
+                ] as { key: SidebarSection; label: string }[]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveSection(key)}
+                    className="px-8 py-4 text-sm font-medium transition-all"
+                    style={
+                      activeSection === key
+                        ? {
+                            color:        'var(--color-primary)',
+                            fontWeight:   700,
+                            borderBottom: '2px solid var(--color-primary)',
+                          }
+                        : { color: 'var(--color-on-surface-variant)' }
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-8">
+                {/* ── Info Tab ── */}
+                {activeSection === 'info' && (
+                  <>
+                    <h2
+                      className="text-2xl font-semibold mb-6"
+                      style={{ fontFamily: 'Playfair Display, serif', color: 'var(--color-on-surface)' }}
+                    >
+                      Thông tin cá nhân
+                    </h2>
+
+                    {infoMsg && (
+                      <div className="mb-5">
+                        <Alert type={infoMsg.type} message={infoMsg.text} />
+                      </div>
+                    )}
+
+                    <form onSubmit={handleInfoSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Full Name */}
+                      <div>
+                        <FieldLabel>Họ và tên</FieldLabel>
+                        <input
+                          type="text"
+                          className={INPUT_BASE}
+                          style={inputStyle}
+                          placeholder="Nhập họ và tên"
+                          value={infoData.fullName}
+                          onChange={(e) => setInfoData((p) => ({ ...p, fullName: e.target.value }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                          required
+                        />
+                      </div>
+
+                      {/* Email (read-only) */}
+                      <div>
+                        <FieldLabel>Email</FieldLabel>
+                        <input
+                          type="email"
+                          className={INPUT_BASE}
+                          style={inputDisabledStyle}
+                          value={user?.email ?? ''}
+                          readOnly
+                        />
+                      </div>
+
+                      {/* Phone */}
+                      <div>
+                        <FieldLabel>Số điện thoại</FieldLabel>
+                        <input
+                          type="tel"
+                          className={INPUT_BASE}
+                          style={inputStyle}
+                          placeholder="0xxx xxx xxx"
+                          value={infoData.phoneNumber}
+                          onChange={(e) => setInfoData((p) => ({ ...p, phoneNumber: e.target.value }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                        />
+                      </div>
+
+                      {/* Date of birth */}
+                      <div>
+                        <FieldLabel>Ngày sinh</FieldLabel>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            className={INPUT_BASE}
+                            style={inputStyle}
+                            value={infoData.dateOfBirth}
+                            onChange={(e) => setInfoData((p) => ({ ...p, dateOfBirth: e.target.value }))}
+                            onFocus={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                              (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                            }}
+                            onBlur={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                            }}
+                          />
+                          <span
+                            className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none"
+                            style={{ color: 'var(--color-outline)' }}
+                          >
+                            calendar_month
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Gender */}
+                      <div>
+                        <FieldLabel>Giới tính</FieldLabel>
+                        <select
+                          className={INPUT_BASE + ' appearance-none'}
+                          style={inputStyle}
+                          value={infoData.gender}
+                          onChange={(e) => setInfoData((p) => ({ ...p, gender: e.target.value as Gender }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                        >
+                          <option value="">Không chọn</option>
+                          <option value="MALE">Nam</option>
+                          <option value="FEMALE">Nữ</option>
+                          <option value="OTHER">Khác</option>
+                        </select>
+                      </div>
+
+                      {/* Avatar URL */}
+                      <div>
+                        <FieldLabel>Avatar URL</FieldLabel>
+                        <input
+                          type="url"
+                          className={INPUT_BASE}
+                          style={inputStyle}
+                          placeholder="https://..."
+                          value={infoData.avatarUrl}
+                          onChange={(e) => setInfoData((p) => ({ ...p, avatarUrl: e.target.value }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                        />
+                      </div>
+
+                      {/* Submit */}
+                      <div className="md:col-span-2 flex justify-end pt-2">
+                        <button
+                          type="submit"
+                          disabled={infoLoading}
+                          className="px-10 py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                          style={{
+                            backgroundColor: 'var(--color-primary)',
+                            color:           'var(--color-on-primary)',
+                            boxShadow:       '0 8px 20px rgba(92,64,51,0.15)',
+                          }}
+                        >
+                          {infoLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                )}
+
+                {/* ── Password Tab ── */}
+                {activeSection === 'password' && (
+                  <>
+                    <h2
+                      className="text-2xl font-semibold mb-6"
+                      style={{ fontFamily: 'Playfair Display, serif', color: 'var(--color-on-surface)' }}
+                    >
+                      Đổi mật khẩu
+                    </h2>
+
+                    {!user?.hasPassword && (
+                      <div className="mb-5">
+                        <Alert type="info" message="Tài khoản của bạn đăng nhập qua Google. Vui lòng thiết lập mật khẩu lần đầu." />
+                      </div>
+                    )}
+
+                    {pwMsg && (
+                      <div className="mb-5">
+                        <Alert type={pwMsg.type} message={pwMsg.text} />
+                      </div>
+                    )}
+
+                    <form onSubmit={handlePwSave} className="flex flex-col gap-5 max-w-md">
+                      {user?.hasPassword && (
+                        <div>
+                          <FieldLabel>Mật khẩu hiện tại</FieldLabel>
+                          <input
+                            type="password"
+                            className={INPUT_BASE}
+                            style={inputStyle}
+                            placeholder="••••••••"
+                            value={pwData.oldPassword}
+                            onChange={(e) => setPwData((p) => ({ ...p, oldPassword: e.target.value }))}
+                            onFocus={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                              (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                            }}
+                            onBlur={(e) => {
+                              (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                            }}
+                            required
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <FieldLabel>Mật khẩu mới</FieldLabel>
+                        <input
+                          type="password"
+                          className={INPUT_BASE}
+                          style={inputStyle}
+                          placeholder="Ít nhất 8 ký tự"
+                          value={pwData.newPassword}
+                          onChange={(e) => setPwData((p) => ({ ...p, newPassword: e.target.value }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <FieldLabel>Xác nhận mật khẩu mới</FieldLabel>
+                        <input
+                          type="password"
+                          className={INPUT_BASE}
+                          style={inputStyle}
+                          placeholder="Nhập lại mật khẩu mới"
+                          value={pwData.confirm}
+                          onChange={(e) => setPwData((p) => ({ ...p, confirm: e.target.value }))}
+                          onFocus={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '4px';
+                            (e.currentTarget as HTMLElement).style.borderLeftColor = '#F4600C';
+                          }}
+                          onBlur={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderLeftWidth = '1px';
+                          }}
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={pwLoading}
+                        className="px-10 py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed self-start"
+                        style={{
+                          backgroundColor: 'var(--color-primary)',
+                          color:           'var(--color-on-primary)',
+                          boxShadow:       '0 8px 20px rgba(92,64,51,0.15)',
+                        }}
+                      >
+                        {pwLoading ? 'Đang đổi...' : 'Đổi mật khẩu'}
+                      </button>
+                    </form>
+                  </>
+                )}
+
+                {/* ── Booking History placeholder ── */}
+                {activeSection === 'history' && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <span
+                      className="material-symbols-outlined text-6xl mb-4"
+                      style={{ color: 'var(--color-outline-variant)' }}
+                    >
+                      confirmation_number
+                    </span>
+                    <h2
+                      className="text-xl font-semibold mb-2"
+                      style={{ fontFamily: 'Playfair Display, serif', color: 'var(--color-on-surface)' }}
+                    >
+                      Lịch sử đặt vé
+                    </h2>
+                    <p style={{ color: 'var(--color-on-surface-variant)' }}>
+                      Chưa có vé nào được đặt.
+                    </p>
+                  </div>
+                )}
+
+                {/* ── Promos placeholder ── */}
+                {activeSection === 'promos' && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <span
+                      className="material-symbols-outlined text-6xl mb-4"
+                      style={{ color: 'var(--color-outline-variant)' }}
+                    >
+                      loyalty
+                    </span>
+                    <h2
+                      className="text-xl font-semibold mb-2"
+                      style={{ fontFamily: 'Playfair Display, serif', color: 'var(--color-on-surface)' }}
+                    >
+                      Ưu đãi của tôi
+                    </h2>
+                    <p style={{ color: 'var(--color-on-surface-variant)' }}>
+                      Bạn chưa có ưu đãi nào.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Brand illustration ── */}
+            <div className="relative h-44 rounded-xl overflow-hidden group">
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGehyfz8kfI4n9EBOrG7CjKgY4heord2xR4obMC_MRE_4gPhwMTUPpmNjhomkj2XZQgvnWjvI9N0lqIWEJwtdnXD95-MRPZcO_lZYeMolH7dOKyILQZ_jFcxY44qkj4qu-wuO_YJVXdBir2D7S6h0hCQMJFHjmDOhmbiiZAsmyOlecxOev1Bv7nw7ygaLJHCJvL0x4pjkAd_M25mTSu3OolbAisiCh0ZJ9NX5mqLpKNbVN8DHG05nV4Iu7vydho2CTRhuCaIh5yiM"
+                alt="Vietnamese countryside at golden hour"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <Input
-                label="Xác nhận mật khẩu mới"
-                type="password"
-                placeholder="Nhập lại mật khẩu mới"
-                value={pwData.confirm}
-                onChange={(e) => setPwData((p) => ({ ...p, confirm: e.target.value }))}
-                required
-              />
-              <Button type="submit" loading={pwLoading}>Đổi mật khẩu</Button>
-            </form>
-          </div>
-        )}
-      </div>
+              <div
+                className="absolute inset-0 flex items-end p-8"
+                style={{ background: 'linear-gradient(to top, rgba(161,59,0,0.75) 0%, transparent 100%)' }}
+              >
+                <p
+                  className="text-white italic text-lg font-semibold"
+                  style={{ fontFamily: 'Playfair Display, serif' }}
+                >
+                  "Hành trình trở về là hành trình tuyệt vời nhất."
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
       <Footer />
     </div>
   );

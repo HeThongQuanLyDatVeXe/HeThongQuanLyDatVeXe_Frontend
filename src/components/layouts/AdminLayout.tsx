@@ -1,99 +1,208 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/user-service/useAuth';
 import { ROUTES } from '../../constants/routes';
 
-const navItems = [
-    { label: 'Dashboard', path: ROUTES.ADMIN_DASHBOARD, icon: '⊞' },
-    { label: 'Người dùng', path: ROUTES.ADMIN_USERS, icon: '👥' },
-    { label: 'Vai trò', path: ROUTES.ADMIN_ROLES, icon: '🔐' },
-    { label: 'Quyền hạn', path: ROUTES.ADMIN_PERMISSIONS, icon: '🛡️' },
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon: string;
+}
+
+// ─── Navigation structure (matches admin.html sidebar) ───────────────────────
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { label: 'Tổng quan',    path: ROUTES.ADMIN_DASHBOARD, icon: 'dashboard' },
+    ],
+  },
+  {
+    label: 'Quản lý vận hành',
+    items: [
+      { label: 'Tuyến đường',  path: '#',                    icon: 'route' },
+      { label: 'Lịch trình',   path: '#',                    icon: 'calendar_month' },
+      { label: 'Vé',           path: '#',                    icon: 'confirmation_number' },
+      { label: 'Xe',           path: '#',                    icon: 'directions_bus' },
+    ],
+  },
+  {
+    label: 'Dữ liệu & Hệ thống',
+    items: [
+      { label: 'Người dùng',   path: ROUTES.ADMIN_USERS,     icon: 'group' },
+      { label: 'Vai trò',      path: ROUTES.ADMIN_ROLES,     icon: 'security' },
+      { label: 'Quyền hạn',   path: ROUTES.ADMIN_PERMISSIONS, icon: 'shield_person' },
+      { label: 'Tài chính',   path: '#',                    icon: 'payments' },
+      { label: 'Hệ thống',    path: '#',                    icon: 'settings' },
+    ],
+  },
 ];
 
+
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, logout } = useAuth();
-    const location = useLocation();
-    const navigate = useNavigate();
-    const [collapsed, setCollapsed] = useState(false);
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        await logout();
-        navigate(ROUTES.ADMIN_LOGIN);
-    };
+  const handleLogout = async () => {
+    await logout();
+    navigate(ROUTES.ADMIN_LOGIN);
+  };
 
-    return (
-        <div className="flex h-screen bg-slate-50">
-            {/* Sidebar */}
-            <aside
-                className={`flex flex-col bg-slate-900 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'
-                    }`}
+
+  return (
+    <div
+      className="font-body-md text-on-surface antialiased overflow-hidden flex h-screen"
+      style={{ backgroundColor: '#F9F2EC' }}
+    >
+      {/* Noise overlay */}
+      <div className="fixed inset-0 grain-overlay z-50 pointer-events-none" />
+
+      {/* ── Sidebar ── */}
+      <aside
+        className="w-[260px] flex flex-col flex-shrink-0 h-full z-40 custom-scrollbar"
+        style={{ backgroundColor: '#1A1410' }}
+      >
+        {/* Brand */}
+        <div className="px-6 py-8">
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className="italic text-2xl font-semibold"
+              style={{ fontFamily: 'Playfair Display, serif', color: '#F4600C' }}
             >
-                {/* Logo */}
-                <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-sm">D</span>
-                    </div>
-                    {!collapsed && (
-                        <span className="text-white font-bold text-lg" style={{ fontFamily: 'Playfair Display, serif' }}>
-                            Admin
-                        </span>
-                    )}
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="ml-auto text-slate-400 hover:text-white transition-colors"
-                    >
-                        {collapsed ? '→' : '←'}
-                    </button>
-                </div>
-
-                {/* Nav */}
-                <nav className="flex-1 py-4 overflow-y-auto">
-                    {navItems.map(({ label, path, icon }) => {
-                        const active = location.pathname === path;
-                        return (
-                            <Link
-                                key={path}
-                                to={path}
-                                className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg mb-1 transition-all ${active
-                                        ? 'bg-amber-500 text-white'
-                                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                    }`}
-                            >
-                                <span className="text-lg flex-shrink-0">{icon}</span>
-                                {!collapsed && <span className="text-sm font-medium">{label}</span>}
-                            </Link>
-                        );
-                    })}
-                </nav>
-
-                {/* User */}
-                <div className="border-t border-slate-700 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {user?.fullName?.[0]?.toUpperCase()}
-                        </div>
-                        {!collapsed && (
-                            <div className="flex-1 min-w-0">
-                                <p className="text-white text-xs font-medium truncate">{user?.fullName}</p>
-                                <p className="text-slate-400 text-xs truncate">{user?.email}</p>
-                            </div>
-                        )}
-                    </div>
-                    {!collapsed && (
-                        <button
-                            onClick={handleLogout}
-                            className="mt-3 w-full text-left text-xs text-slate-400 hover:text-amber-400 transition-colors"
-                        >
-                            Đăng xuất →
-                        </button>
-                    )}
-                </div>
-            </aside>
-
-            {/* Main content */}
-            <main className="flex-1 overflow-auto">
-                <div className="p-6">{children}</div>
-            </main>
+              Đi Về Nhà
+            </span>
+          </div>
+          <span
+            className="inline-block px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase border"
+            style={{
+              backgroundColor: 'rgba(244,96,12,0.2)',
+              color: '#F4600C',
+              borderColor: 'rgba(244,96,12,0.3)',
+            }}
+          >
+            Admin Panel
+          </span>
         </div>
-    );
+
+        {/* Navigation */}
+        <nav
+          className="flex-1 px-4 space-y-6 overflow-y-auto"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: '#44372F #1A1410' }}
+        >
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi}>
+              {group.label && (
+                <p className="px-4 mb-2 text-xs font-bold uppercase tracking-widest"
+                   style={{ color: '#6B6060' }}>
+                  {group.label}
+                </p>
+              )}
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <li key={item.path} className="relative">
+                      {isActive && (
+                        <div
+                          className="absolute left-[-16px] top-0 bottom-0 w-1 rounded-r"
+                          style={{ backgroundColor: '#F4600C' }}
+                        />
+                      )}
+                      <Link
+                        to={item.path}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
+                        style={
+                          isActive
+                            ? {
+                                background: 'linear-gradient(to right, rgba(244,96,12,0.2), transparent)',
+                                color: '#F4600C',
+                                fontWeight: 600,
+                              }
+                            : { color: '#A8978F' }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.05)';
+                            (e.currentTarget as HTMLElement).style.color = '#ffffff';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                            (e.currentTarget as HTMLElement).style.color = '#A8978F';
+                          }
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* ── Home button + Logout ── */}
+        <div className="p-4 border-t" style={{ borderColor: '#2D2420' }}>
+          {/* Go to Homepage — prominent CTA */}
+          <Link
+            to={ROUTES.HOME}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg mb-2 font-semibold transition-all group"
+            style={{
+              background: 'linear-gradient(135deg, #F4600C 0%, #c84d04 100%)',
+              color: '#ffffff',
+            }}
+          >
+            <span className="material-symbols-outlined text-xl">home</span>
+            <span>Trang Chủ</span>
+          </Link>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
+            style={{ color: '#A8978F' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.05)';
+              (e.currentTarget as HTMLElement).style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = '#A8978F';
+            }}
+          >
+            <span className="material-symbols-outlined text-xl">logout</span>
+            <span>Đăng xuất</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main content area ── */}
+      <div className="flex-1 overflow-y-auto p-8" style={{ scrollbarWidth: 'thin', scrollbarColor: '#44372F #F9F2EC' }}>
+        {children}
+      </div>
+
+      {/* Floating support button */}
+      <button
+        className="fixed bottom-8 right-8 w-14 h-14 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-transform z-[60]"
+        style={{ backgroundColor: '#1A1410' }}
+        title="Hỗ trợ"
+      >
+        <span className="material-symbols-outlined">support_agent</span>
+      </button>
+    </div>
+  );
 };
