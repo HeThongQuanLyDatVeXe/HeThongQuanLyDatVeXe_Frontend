@@ -1,6 +1,11 @@
 export const ROUTES = {
 
   HOME: '/',
+  ROUTES: '/tuyen-duong',
+  TRIP_DETAIL: '/tuyen-duong/:id',
+  SEAT_SELECTION: '/tuyen-duong/:id/chon-ghe',
+  CHECKOUT: '/tuyen-duong/:id/thanh-toan',
+  BOOKING_SUCCESSFUL: '/tuyen-duong/:id/dat-cho-thanh-cong',
   LOGIN: '/login',
   REGISTER: '/register',
   GOOGLE_CALLBACK: '/auth/google/callback',
@@ -9,6 +14,7 @@ export const ROUTES = {
 
   PROFILE: '/profile',
   CHANGE_PASSWORD: '/profile/change-password',
+  MY_BOOKINGS: '/my-bookings',
 
   ADMIN_LOGIN: '/admin/login',
   ADMIN_DASHBOARD: '/admin',

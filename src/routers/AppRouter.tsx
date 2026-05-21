@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { LandingPage } from '../pages/LandingPage';
+import { RoutesPage } from '../pages/RoutesPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ProfilePage } from '../pages/ProfilePage';
@@ -12,6 +13,11 @@ import { AdminRolesPage } from '../pages/AdminRolesPage';
 import { AdminPermissionsPage } from '../pages/AdminPermissionsPage';
 import { GoogleCallbackPage } from '../pages/GoogleCallbackPage';
 import { useAuth } from '../hooks/user-service/useAuth';
+import { TripDetailPage } from '../pages/TripDetailPage';
+import { SeatSelectionPage } from '../pages/SeatSelectionPage';
+import { CheckoutPage } from '../pages/CheckoutPage';
+import { BookingSuccessfulPage } from '../pages/BookingSuccessfulPage';
+import { MyBookingsPage } from '../pages/MyBookingsPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
@@ -65,6 +71,11 @@ export const AppRouter: React.FC = () => {
         <BrowserRouter>
             <Routes>
                 <Route path={ROUTES.HOME} element={<LandingPage />} />
+                <Route path={ROUTES.ROUTES} element={<RoutesPage />} />
+                <Route path={ROUTES.TRIP_DETAIL} element={<TripDetailPage />} />
+                <Route path={ROUTES.SEAT_SELECTION} element={<SeatSelectionPage />} />
+                <Route path={ROUTES.CHECKOUT} element={<CheckoutPage />} />
+                <Route path={ROUTES.BOOKING_SUCCESSFUL} element={<BookingSuccessfulPage />} />
 
                 <Route
                     path={ROUTES.LOGIN}
@@ -89,6 +100,15 @@ export const AppRouter: React.FC = () => {
                     element={(
                         <ProtectedRoute>
                             <ProfilePage />
+                        </ProtectedRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.MY_BOOKINGS}
+                    element={(
+                        <ProtectedRoute>
+                            <MyBookingsPage />
                         </ProtectedRoute>
                     )}
                 />
