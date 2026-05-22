@@ -1,22 +1,36 @@
+// ─── Enums ──────────────────────────────────────────────────────────────────
+export type RouteStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+
+// ─── Response DTOs ──────────────────────────────────────────────────────────
 export interface CityResponse {
   id: string;
   name: string;
   code: string;
-  region?: string;
-  imageUrl?: string;
+  province: string;
+  isActive: boolean;
+  sortOrder: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface RouteResponse {
   id: string;
-  originCity: CityResponse;
-  destinationCity: CityResponse;
-  distance: number; // in km
-  estimatedDuration: number; // in minutes
-  basePrice: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  code: string;
+  name: string;
+  originCityId: string;
+  originCityName: string;
+  destinationCityId: string;
+  destinationCityName: string;
+  distanceKm: number;
+  durationMinutes: number;
+  status: RouteStatus;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Mock fields that UI expects but backend doesn't provide natively yet
+  basePrice?: number;
   popular?: boolean;
-  createdAt: string;
 }
 
 export interface PointResponse {
@@ -41,8 +55,8 @@ export interface RouteStopPointResponse {
 
 export interface RoutePage {
   content: RouteResponse[];
-  pageNumber: number;
-  pageSize: number;
+  page: number;
+  size: number;
   totalElements: number;
   totalPages: number;
   last: boolean;

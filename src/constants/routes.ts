@@ -25,4 +25,8 @@ export const ROUTES = {
   ADMIN_ROUTES: '/admin/routes',
   ADMIN_CITIES: '/admin/cities',
   ADMIN_POINTS: '/admin/points',
+  ADMIN_VEHICLES: '/admin/vehicles',
+  ADMIN_TRIPS: '/admin/trips',
+  ADMIN_DRIVERS: '/admin/drivers',
+  ADMIN_PRICING: '/admin/pricing',
 } as const;

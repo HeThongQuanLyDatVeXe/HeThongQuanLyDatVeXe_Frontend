@@ -491,7 +491,6 @@ export const AdminDashboard: React.FC = () => {
                   className="absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full ring-4"
                   style={{
                     backgroundColor: item.color,
-                    ringColor: `${item.color}33`,
                     boxShadow: `0 0 0 4px ${item.color}22`,
                   }}
                 />

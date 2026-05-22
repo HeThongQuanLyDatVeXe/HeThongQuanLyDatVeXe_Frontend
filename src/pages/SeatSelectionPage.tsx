@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { mockRoutes } from './RoutesPage';
 import { ROUTES } from '../constants/routes';
 
 export const SeatSelectionPage: React.FC = () => {
@@ -9,13 +8,10 @@ export const SeatSelectionPage: React.FC = () => {
     const location = useLocation();
 
     // Recover passengers count if passed from previous page
-    const passedState = location.state as { passengers?: number } | null;
-    const initialSeatsCount = passedState?.passengers || 2;
+    const passedState = location.state as { passengers?: number; currentTrip?: any } | null;
 
-    // Find the route
-    const route = mockRoutes.find((r) => r.id === id);
-    const defaultRoute = {
-        id: 'default',
+    const currentTrip = passedState?.currentTrip || {
+        id: id || 'default',
         from: 'Sài Gòn',
         to: 'Đà Lạt',
         duration: '7 tiếng di chuyển',
@@ -23,13 +19,6 @@ export const SeatSelectionPage: React.FC = () => {
         operator: 'Phương Trang',
         vehicleType: 'Giường nằm VIP 34 chỗ'
     };
-    const currentRoute = route 
-        ? {
-            ...route,
-            operator: 'Phương Trang',
-            vehicleType: 'Giường nằm VIP 34 chỗ'
-          }
-        : defaultRoute;
 
     // State for selected seats
     // We can pre-select A12 and A13 to match the template default, but make it fully interactive!
@@ -64,11 +53,11 @@ export const SeatSelectionPage: React.FC = () => {
             alert('Vui lòng chọn ít nhất một ghế ngồi để tiếp tục!');
             return;
         }
-        navigate(`/tuyen-duong/${currentRoute.id}/thanh-toan`, {
+        navigate(`/tuyen-duong/${currentTrip.id}/thanh-toan`, {
             state: {
                 selectedSeats,
-                currentRoute,
-                totalAmount: currentRoute.price * selectedSeats.length
+                currentTrip,
+                totalAmount: currentTrip.price * selectedSeats.length
             }
         });
     };
@@ -128,7 +117,7 @@ export const SeatSelectionPage: React.FC = () => {
                         Đi Về Nhà
                     </div>
                     <button 
-                        onClick={() => navigate(`/tuyen-duong/${currentRoute.id}`)}
+                        onClick={() => navigate(`/tuyen-duong/${currentTrip.id}`)}
                         className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none outline-none font-bold text-sm tracking-wider uppercase"
                     >
                         <span>Hủy & Quay Lại</span>
@@ -158,7 +147,7 @@ export const SeatSelectionPage: React.FC = () => {
                                     <span className="w-2 h-2 rounded-full bg-primary"></span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentRoute.from} - BẾN XE ĐÓN</p>
+                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.from} - BẾN XE ĐÓN</p>
                                     <p className="text-lg text-on-surface font-semibold">18:00 • T6, 24 Th11</p>
                                 </div>
                             </div>
@@ -169,7 +158,7 @@ export const SeatSelectionPage: React.FC = () => {
                                     <span className="material-symbols-outlined text-[14px] text-tertiary-container font-bold">location_on</span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentRoute.to} - BẾN XE ĐẾN</p>
+                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.to} - BẾN XE ĐẾN</p>
                                     <p className="text-lg text-on-surface font-semibold">01:00 • T7, 25 Th11</p>
                                 </div>
                             </div>
@@ -187,8 +176,8 @@ export const SeatSelectionPage: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <p className="text-base font-semibold text-on-surface">{currentRoute.operator}</p>
-                                <p className="text-sm text-on-surface-variant">{currentRoute.vehicleType}</p>
+                                <p className="text-base font-semibold text-on-surface">{currentTrip.operator}</p>
+                                <p className="text-sm text-on-surface-variant">{currentTrip.vehicleType}</p>
                             </div>
                         </div>
                     </div>
@@ -391,7 +380,7 @@ export const SeatSelectionPage: React.FC = () => {
                             {selectedSeats.length > 0 && ` (${selectedSeats.join(', ')})`}
                         </p>
                         <p className="text-2xl font-bold text-primary mt-1" style={{ fontFamily: 'Playfair Display, serif' }}>
-                            Tổng: {(currentRoute.price * selectedSeats.length).toLocaleString()}₫
+                            Tổng: {(currentTrip.price * selectedSeats.length).toLocaleString()}₫
                         </p>
                     </div>
                     

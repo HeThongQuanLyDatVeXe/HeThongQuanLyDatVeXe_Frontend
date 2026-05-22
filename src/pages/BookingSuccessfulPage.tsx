@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 
@@ -8,7 +8,7 @@ interface SuccessfulState {
     phoneNumber: string;
     email: string;
     selectedSeats: string[];
-    currentRoute: any;
+    currentTrip: any;
     totalPaid: number;
 }
 
@@ -27,7 +27,7 @@ export const BookingSuccessfulPage: React.FC = () => {
         email: 'nguyen.vana@gmail.com',
         selectedSeats: ['A12', 'A13'],
         totalPaid: 650000,
-        currentRoute: {
+        currentTrip: {
             id: 'default',
             from: 'Sài Gòn',
             to: 'Đà Lạt',
@@ -130,7 +130,7 @@ export const BookingSuccessfulPage: React.FC = () => {
                                         className="text-xl font-bold text-on-surface"
                                         style={{ fontFamily: 'Playfair Display, serif' }}
                                     >
-                                        {details.currentRoute.from}
+                                        {details.currentTrip.from}
                                     </p>
                                     <p className="text-sm text-on-surface-variant">Bến xe đón</p>
                                     <p className="text-sm font-semibold text-primary mt-2">18:00</p>
@@ -140,7 +140,7 @@ export const BookingSuccessfulPage: React.FC = () => {
                                     <div className="w-full h-0.5 bg-outline-variant absolute top-1/2 -translate-y-1/2 z-0"></div>
                                     <span className="material-symbols-outlined text-primary bg-surface-container-low px-2 z-10 font-bold">directions_bus</span>
                                     <p className="text-xs text-on-surface-variant mt-4 z-10 bg-surface-container-low px-1 font-semibold">
-                                        {details.currentRoute.duration || '7 tiếng'}
+                                        {details.currentTrip.duration || '7 tiếng'}
                                     </p>
                                 </div>
                                 
@@ -149,7 +149,7 @@ export const BookingSuccessfulPage: React.FC = () => {
                                         className="text-xl font-bold text-on-surface"
                                         style={{ fontFamily: 'Playfair Display, serif' }}
                                     >
-                                        {details.currentRoute.to}
+                                        {details.currentTrip.to}
                                     </p>
                                     <p className="text-sm text-on-surface-variant">Bến xe khách</p>
                                     <p className="text-sm font-semibold text-primary mt-2">01:30</p>
@@ -184,7 +184,7 @@ export const BookingSuccessfulPage: React.FC = () => {
                                 Quét mã QR khi lên xe
                             </p>
                             <p className="text-sm text-on-surface font-semibold text-center bg-surface-container-lowest px-3 py-1 rounded-full border border-outline-variant/30 shadow-inner">
-                                Biển số: {details.currentRoute.id === '1' ? '29B-999.99' : '49B-123.45'}
+                                Biển số: {details.currentTrip.id === '1' ? '29B-999.99' : '49B-123.45'}
                             </p>
                         </div>
                     </div>

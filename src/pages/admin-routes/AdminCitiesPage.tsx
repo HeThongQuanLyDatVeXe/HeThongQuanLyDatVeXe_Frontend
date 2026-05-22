@@ -26,7 +26,9 @@ export const AdminCitiesPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await routeService.getCities();
-      setCities(res.data.result ?? []);
+      const payload = res.data.result || res.data.data;
+      const citiesArray = Array.isArray(payload) ? payload : (payload as any)?.content || [];
+      setCities(citiesArray);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Lỗi tải danh sách thành phố');
     } finally {
@@ -37,7 +39,7 @@ export const AdminCitiesPage: React.FC = () => {
   const openModal = (city?: CityResponse) => {
     if (city) {
       setEditingCity(city);
-      setFormData({ name: city.name, code: city.code, region: city.region || '', imageUrl: city.imageUrl || '' });
+      setFormData({ name: city.name, code: city.code, region: city.province || '', imageUrl: '' });
     } else {
       setEditingCity(null);
       setFormData({ name: '', code: '', region: '', imageUrl: '' });
@@ -110,7 +112,7 @@ export const AdminCitiesPage: React.FC = () => {
               <tr key={city.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-slate-900">{city.code}</td>
                 <td className="px-6 py-4">{city.name}</td>
-                <td className="px-6 py-4">{city.region || '-'}</td>
+                <td className="px-6 py-4">{city.province || '-'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
                     <button

@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
 
     const hasAdminRole = user?.roles?.some((role: any) => 
         (typeof role === 'string' ? role : role?.name || '').toUpperCase().includes('ADMIN')
-    ) || (user?.role || '').toUpperCase().includes('ADMIN');
+    );
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

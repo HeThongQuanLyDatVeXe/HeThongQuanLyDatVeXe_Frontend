@@ -42,7 +42,39 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
+    // Do not intercept 401 for auth endpoints to prevent unwanted redirects/reloads
+    if (error.response?.status === 401 && original.url?.includes('/identity/auth/')) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !original._retry) {
+      original._retry = true;
+
+      const refreshToken = cookieUtils.getRefreshToken();
+
+      // If no refresh token is available, try retrying public GET requests
+      // without the Authorization header (the stale token may cause 401 on
+      // otherwise public/permitAll endpoints).
+      if (!refreshToken) {
+        // For GET requests, retry without auth header — the endpoint might be public
+        if (original.method?.toLowerCase() === 'get' && !original._retryWithoutAuth) {
+          original._retryWithoutAuth = true;
+          delete original.headers.Authorization;
+          cookieUtils.clearTokens();
+          return axiosInstance(original);
+        }
+        // For non-GET requests or if the retry already failed, redirect to login
+        cookieUtils.clearTokens();
+        const isPublicPage = ['/', '/tuyen-duong', '/login', '/register', '/forgot-password'].some(
+          p => window.location.pathname === p || window.location.pathname.startsWith('/tuyen-duong/')
+        );
+        if (!isPublicPage && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+
+      // There is a refresh token — attempt to refresh
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -56,36 +88,36 @@ axiosInstance.interceptors.response.use(
           });
       }
 
-      original._retry = true;
       isRefreshing = true;
 
-      const refreshToken = cookieUtils.getRefreshToken();
-
-      if (refreshToken) {
-        return new Promise(function(resolve, reject) {
-          axios.post(`${API_BASE_URL}/api/v1/identity/auth/refresh-token`, { refreshToken })
-            .then((res) => {
-              const { accessToken, refreshToken: newRefresh } = res.data.result;
-              cookieUtils.setTokens(accessToken, newRefresh);
-              original.headers.Authorization = `Bearer ${accessToken}`;
-              processQueue(null, accessToken);
+      return new Promise(function(resolve, reject) {
+        axios.post(`${API_BASE_URL}/api/v1/identity/auth/refresh-token`, { refreshToken })
+          .then((res) => {
+            const { accessToken, refreshToken: newRefresh } = res.data.result;
+            cookieUtils.setTokens(accessToken, newRefresh);
+            original.headers.Authorization = `Bearer ${accessToken}`;
+            processQueue(null, accessToken);
+            resolve(axiosInstance(original));
+          })
+          .catch((err) => {
+            processQueue(err, null);
+            cookieUtils.clearTokens();
+            // On refresh failure, retry GET requests without auth (public endpoint fallback)
+            if (original.method?.toLowerCase() === 'get' && !original._retryWithoutAuth) {
+              original._retryWithoutAuth = true;
+              delete original.headers.Authorization;
               resolve(axiosInstance(original));
-            })
-            .catch((err) => {
-              processQueue(err, null);
-              cookieUtils.clearTokens();
-              window.location.href = '/login';
+            } else {
+              if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+              }
               reject(err);
-            })
-            .finally(() => {
-              isRefreshing = false;
-            });
-        });
-      } else {
-        cookieUtils.clearTokens();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
+            }
+          })
+          .finally(() => {
+            isRefreshing = false;
+          });
+      });
     }
 
     return Promise.reject(error);

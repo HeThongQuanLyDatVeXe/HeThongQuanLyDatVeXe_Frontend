@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
-import { mockRoutes } from './RoutesPage';
-import { ROUTES } from '../constants/routes';
 
 interface CheckoutState {
     selectedSeats: string[];
-    currentRoute: any;
+    currentTrip: any;
     totalAmount: number;
 }
 
@@ -19,10 +17,8 @@ export const CheckoutPage: React.FC = () => {
     // Recover details from route state
     const passedState = location.state as CheckoutState | null;
 
-    // Default route resolve
-    const route = mockRoutes.find((r) => r.id === id);
-    const defaultRoute = {
-        id: 'default',
+    const currentTrip = passedState?.currentTrip || {
+        id: id || 'default',
         from: 'Sài Gòn',
         to: 'Đà Lạt',
         duration: '7 tiếng di chuyển',
@@ -31,16 +27,8 @@ export const CheckoutPage: React.FC = () => {
         vehicleType: 'Giường nằm VIP 34 chỗ'
     };
 
-    const currentRoute = passedState?.currentRoute || route 
-        ? {
-            ...(passedState?.currentRoute || route),
-            operator: passedState?.currentRoute?.operator || 'Phương Trang',
-            vehicleType: passedState?.currentRoute?.vehicleType || 'Giường nằm VIP 34 chỗ'
-          }
-        : defaultRoute;
-
     const selectedSeats = passedState?.selectedSeats || ['A12', 'A13'];
-    const baseTotal = passedState?.totalAmount || (currentRoute.price * selectedSeats.length);
+    const baseTotal = passedState?.totalAmount || (currentTrip.price * selectedSeats.length);
 
     // Form inputs state
     const [fullName, setFullName] = useState('');
@@ -109,14 +97,14 @@ export const CheckoutPage: React.FC = () => {
             const bookingCode = `DVN-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
             setIsProcessing(false);
             
-            navigate(`/tuyen-duong/${currentRoute.id}/dat-cho-thanh-cong`, {
+            navigate(`/tuyen-duong/${currentTrip.id}/dat-cho-thanh-cong`, {
                 state: {
                     bookingCode,
                     fullName: fullName.trim(),
                     phoneNumber: phoneNumber.trim(),
                     email: email.trim(),
                     selectedSeats,
-                    currentRoute,
+                    currentTrip,
                     totalPaid: Math.max(0, baseTotal - appliedDiscount)
                 }
             });
@@ -305,11 +293,11 @@ export const CheckoutPage: React.FC = () => {
                                 {/* Route details */}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentRoute.from}</span>
+                                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.from}</span>
                                         <span className="material-symbols-outlined text-outline text-[18px]">arrow_right_alt</span>
-                                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentRoute.to}</span>
+                                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.to}</span>
                                     </div>
-                                    <div className="text-base font-semibold text-on-surface">{currentRoute.operator} • {currentRoute.vehicleType}</div>
+                                    <div className="text-base font-semibold text-on-surface">{currentTrip.operator} • {currentTrip.vehicleType}</div>
                                     
                                     <div className="text-sm text-on-surface-variant mt-2 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[16px]">schedule</span>
@@ -357,7 +345,7 @@ export const CheckoutPage: React.FC = () => {
                                 {/* Price breakdown */}
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-sm text-on-surface-variant">
-                                        <span>Giá vé ({selectedSeats.length} x {currentRoute.price.toLocaleString()}đ)</span>
+                                        <span>Giá vé ({selectedSeats.length} x {currentTrip.price.toLocaleString()}đ)</span>
                                         <span>{baseTotal.toLocaleString()}đ</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm text-on-surface-variant">

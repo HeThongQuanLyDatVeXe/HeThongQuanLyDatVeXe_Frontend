@@ -15,6 +15,10 @@ import { AdminPermissionsPage } from '../pages/AdminPermissionsPage';
 import { AdminRoutesPage } from '../pages/admin-routes/AdminRoutesPage';
 import { AdminCitiesPage } from '../pages/admin-routes/AdminCitiesPage';
 import { AdminPointsPage } from '../pages/admin-routes/AdminPointsPage';
+import { AdminVehiclesPage } from '../pages/admin-vehicle/AdminVehiclesPage';
+import { AdminTripsPage } from '../pages/admin-trip/AdminTripsPage';
+import { AdminDriversPage } from '../pages/admin-driver/AdminDriversPage';
+import { AdminPricesPage } from '../pages/admin-price/AdminPricesPage';
 import { GoogleCallbackPage } from '../pages/GoogleCallbackPage';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { TripDetailPage } from '../pages/TripDetailPage';
@@ -175,6 +179,33 @@ export const AppRouter: React.FC = () => {
                 />
 
                 <Route
+                    path={ROUTES.ADMIN_VEHICLES}
+                    element={(
+                        <AdminRoute>
+                            <AdminVehiclesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_TRIPS}
+                    element={(
+                        <AdminRoute>
+                            <AdminTripsPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_DRIVERS}
+                    element={(
+                        <AdminRoute>
+                            <AdminDriversPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
                     path={ROUTES.ADMIN_CITIES}
                     element={(
                         <AdminRoute>
@@ -188,6 +219,15 @@ export const AppRouter: React.FC = () => {
                     element={(
                         <AdminRoute>
                             <AdminPointsPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_PRICING}
+                    element={(
+                        <AdminRoute>
+                            <AdminPricesPage />
                         </AdminRoute>
                     )}
                 />

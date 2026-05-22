@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
+import { routeService } from '../services/route-service/routeService';
+import { priceService } from '../services/price-service/priceService';
+import type { RouteResponse } from '../types/route-service/response';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
 import { 
@@ -141,6 +146,7 @@ const CountdownTimer: React.FC = () => {
 };
 
 export const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
 
   // Search overlay states
   const [tripType, setTripType] = useState<'one-way' | 'round-trip'>('one-way');
@@ -170,46 +176,58 @@ export const LandingPage: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Tìm chuyến xe: ${from || 'Bất kỳ'} → ${to || 'Bất kỳ'} (${tripType === 'one-way' ? 'Một chiều' : 'Khứ hồi'}, Ngày: ${date || 'Hôm nay'}, ${passengers} hành khách)`);
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (date) params.set('date', date);
+    if (passengers > 1) params.set('passengers', passengers.toString());
+    if (tripType === 'round-trip') params.set('roundTrip', 'true');
+    
+    navigate(`${ROUTES.ROUTES}?${params.toString()}`);
   };
 
-  const popularRoutes = [
-    {
-      from: 'Hà Nội',
-      to: 'Sapa',
-      title: 'Hành trình sương mù',
-      price: '350.000₫',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBrG72iS8alc_vq4vyfzoQshXWys8ymAA_Y5zMFrVTxA9MIk03vJ-m58FqyV1S1wJr-UyULF-uWGjF07c0lhHk8cELpK-OPXzMM655kHVKIQy1VfZYNQp70wpn-P5voNeIS0byBczTHyl6hSa7FXMlc10txcWfihxaws1CXBY43JA4efSMrDXSYTA0syGzv98y3GBBQPGrS3SnDModkkf716CeDzYjm_u4deGFGhI1loSCu0hHprF9tm7bTrJnnIcFusvIFpIiVImM'
-    },
-    {
-      from: 'TP. Hồ Chí Minh',
-      to: 'Đà Lạt',
-      title: 'Thành phố ngàn hoa',
-      price: '280.000₫',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBaPjhqxPT6PeZQSANp-Q-QN3nU2yZ0Y_ZaeSuLaMh8MucsHtza9L92oniVUeCVCej5zeCm995VISYXqF4kp32S065C-a6FMvcUi66fpv0jgWA3C9emv--i-OW8WYlZZ56tjxsPfPQj-qT4iXZxOiElN_CUDQUAiwuaR2NvAyVVSgFlqygX9Rwq5YUHHEQx3Og4xlkJCRTsHRJx8Hlc6fPmQIPV4DicFRZlBiMEIIwMSQ5OBavbMxIhTrKBMcjPfN1EoX-EaAM649s'
-    },
-    {
-      from: 'Đà Nẵng',
-      to: 'Nha Trang',
-      title: 'Cung đường biển xanh',
-      price: '400.000₫',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCLxBiWfyIkOSff-4i5wxLaMK78pe9kfMPrqzOxUs_dFG0QyUINzEGrSJ0lk6tAzMo2kyxDgqPPJ7cy9B__dPyYiWiOt6J4oTHkXfBo6DdVV_xbZr4PK9pzldNHl8PKSvTiw9rIRhqI1SyHtr05HZrw8leVJZoLNH9QvAr3EIE5NB6o3zgiaWdcgHxKEDBbUX-QqiUwUNLZB_q7xr924DOp_JeOkPwUPDCd63RkMnX1xccukSZo29QIA_-JZr1LV1zW2MyOCE5TBdQ'
-    },
-    {
-      from: 'Hà Nội',
-      to: 'Hải Phòng',
-      title: 'Đất cảng phượng hồng',
-      price: '150.000₫',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCrS1_YEG6OXhNbNRC0167ng84EVPHEugkZU1g7VRdzRpBy-BghnT535QHM0WWDDkNkRWGWiGdlziOr_4H2cLnVi1sJilGn3jsNLouVInPzR9mNhxY73A3rp2hq7nBXkCchj3xQ--2Kao_SmLJFbsapjsHCqN2NC0nO0_sO8ZmHPWC9dbf4JJqiSf52amNKj18qa0yoLup0VFO4ka8iCaFosQTBsNWfK1ePBHhfy5EVyfmBYuQnDPGe35gSTxBcgz7UNHNLr_m20XM'
-    },
-    {
-      from: 'TP. Hồ Chí Minh',
-      to: 'Vũng Tàu',
-      title: 'Nắng gió đại dương',
-      price: '120.000₫',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCtm9kf5mZscRc5iT1CLtdGE0B525F0rlierj3AzA03TwcpWYtY4r4SHwOhgR6NZKhsoqRK38dIDBCLcL1OMAxyYd8VRaiVHUuiAWtLsYXCYtAFXOCCIuKIXU9ij4nPmI9P3a1jVLR7An_7zmm5KHmCJhIOWtLtQuRpCTsc6AcjNGIUUKl9sNHK4PlSg_71XZ8D8djNHB-wdnD-c-T1HV36zXKbYQZX2rxJ1zDHkSPsQqT34BEQ0cRdf6x0UXl-VpapPM7oUVV9KvQ'
-    }
-  ];
+  const [popularRoutes, setPopularRoutes] = useState<RouteResponse[]>([]);
+  const [loadingPopular, setLoadingPopular] = useState(true);
+
+  useEffect(() => {
+    const fetchPopularRoutes = async () => {
+      try {
+        setLoadingPopular(true);
+        const res = await routeService.getPopularRoutes();
+        const payload = res.data.result || res.data.data;
+        const content = (payload as any)?.content || (Array.isArray(payload) ? payload : []);
+        if (content && content.length > 0) {
+          // Take top 5 for the landing page
+          const topRoutes = content.slice(0, 5);
+          
+          // Enhance with price service
+          const enhancedRoutes = await Promise.all(
+            topRoutes.map(async (route) => {
+              try {
+                const priceRes = await priceService.getPricingByRoute(route.id);
+                const pricePayload = priceRes.data.result || priceRes.data.data;
+                const tiers = pricePayload?.priceTiers;
+                if (tiers && tiers.length > 0) {
+                  const lowestPrice = Math.min(...tiers.map(t => t.minPrice || t.basePrice));
+                  route.basePrice = lowestPrice;
+                }
+              } catch (e) {
+                // Keep fallback
+              }
+              return route;
+            })
+          );
+          
+          setPopularRoutes(enhancedRoutes);
+        }
+      } catch (error) {
+        console.error('Failed to fetch popular routes', error);
+      } finally {
+        setLoadingPopular(false);
+      }
+    };
+    fetchPopularRoutes();
+  }, []);
 
   const testimonials = [
     {
@@ -518,41 +536,56 @@ export const LandingPage: React.FC = () => {
             </a>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            {popularRoutes.map((route, i) => (
-              <div key={i} className="group cursor-pointer flex flex-col">
-                {/* Image panel */}
-                <div className="relative h-64 rounded-2xl overflow-hidden shadow-md mb-4 bg-slate-100">
-                  <img
-                    alt={route.to}
-                    src={route.image}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 select-none pointer-events-none"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90" />
-                  
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="font-label-caps text-[10px] opacity-75 uppercase tracking-wider" style={{ letterSpacing: '0.05em' }}>
-                      {route.from} → {route.to}
-                    </p>
-                    <p className="font-headline-md text-base md:text-lg font-bold leading-tight mt-1">{route.title}</p>
-                  </div>
-                  
-                  <div className="absolute top-4 right-4 bg-primary text-on-primary px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                    Từ {route.price}
-                  </div>
-                </div>
+          {loadingPopular ? (
+            <div className="flex justify-center items-center py-10">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {popularRoutes.map((route, i) => {
+                const from = route.originCityName || 'Không xác định';
+                const to = route.destinationCityName || 'Không xác định';
+                const title = route.name || 'Hành trình kết nối'; 
+                const priceNum = route.basePrice || 350000;
+                const price = `${priceNum.toLocaleString()}₫`;
+                const image = 'https://placehold.co/400x300/F4600C/FFFFFF/png?text=' + encodeURIComponent(to);
 
-                {/* Animated Order Button */}
-                <button 
-                  onClick={() => alert(`Đặt vé thành công tuyến ${route.from} - ${route.to}`)}
-                  className="w-full py-3 border border-primary/20 hover:border-primary text-primary rounded-xl font-semibold text-xs tracking-wider uppercase hover:bg-primary hover:text-on-primary transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm cursor-pointer"
-                >
-                  Đặt ngay
-                </button>
-              </div>
-            ))}
-          </div>
+                return (
+                  <div key={i} className="group cursor-pointer flex flex-col">
+                    {/* Image panel */}
+                    <div className="relative h-64 rounded-2xl overflow-hidden shadow-md mb-4 bg-slate-100">
+                      <img
+                        alt={to}
+                        src={image}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 select-none pointer-events-none"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90" />
+                      
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <p className="font-label-caps text-[10px] opacity-75 uppercase tracking-wider" style={{ letterSpacing: '0.05em' }}>
+                          {from} → {to}
+                        </p>
+                        <p className="font-headline-md text-base md:text-lg font-bold leading-tight mt-1">{title}</p>
+                      </div>
+                      
+                      <div className="absolute top-4 right-4 bg-primary text-on-primary px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        Từ {price}
+                      </div>
+                    </div>
+
+                    {/* Animated Order Button */}
+                    <button 
+                      onClick={() => alert(`Tính năng đặt vé đang phát triển! (Tuyến ${from} - ${to})`)}
+                      className="w-full py-3 border border-primary/20 hover:border-primary text-primary rounded-xl font-semibold text-xs tracking-wider uppercase hover:bg-primary hover:text-on-primary transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm cursor-pointer"
+                    >
+                      Đặt ngay
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

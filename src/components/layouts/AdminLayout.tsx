@@ -30,9 +30,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Tuyến đường',  path: ROUTES.ADMIN_ROUTES,    icon: 'route' },
       { label: 'Thành phố',    path: ROUTES.ADMIN_CITIES,    icon: 'location_city' },
       { label: 'Điểm dừng',    path: ROUTES.ADMIN_POINTS,    icon: 'location_on' },
-      { label: 'Lịch trình',   path: '#',                    icon: 'calendar_month' },
+      { label: 'Lịch trình',   path: ROUTES.ADMIN_TRIPS,     icon: 'calendar_month' },
+      { label: 'Tài xế',       path: ROUTES.ADMIN_DRIVERS,   icon: 'badge' },
       { label: 'Vé',           path: '#',                    icon: 'confirmation_number' },
-      { label: 'Xe',           path: '#',                    icon: 'directions_bus' },
+      { label: 'Xe',           path: ROUTES.ADMIN_VEHICLES,  icon: 'directions_bus' },
     ],
   },
   {
@@ -41,7 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Người dùng',   path: ROUTES.ADMIN_USERS,     icon: 'group' },
       { label: 'Vai trò',      path: ROUTES.ADMIN_ROLES,     icon: 'security' },
       { label: 'Quyền hạn',   path: ROUTES.ADMIN_PERMISSIONS, icon: 'shield_person' },
-      { label: 'Tài chính',   path: '#',                    icon: 'payments' },
+      { label: 'Giá vé',      path: ROUTES.ADMIN_PRICING,     icon: 'payments' },
       { label: 'Hệ thống',    path: '#',                    icon: 'settings' },
     ],
   },
@@ -52,7 +53,7 @@ const NAV_GROUPS: NavGroup[] = [
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -114,7 +115,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                 {group.items.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
-                    <li key={item.path} className="relative">
+                    <li key={item.label} className="relative">
                       {isActive && (
                         <div
                           className="absolute left-[-16px] top-0 bottom-0 w-1 rounded-r"

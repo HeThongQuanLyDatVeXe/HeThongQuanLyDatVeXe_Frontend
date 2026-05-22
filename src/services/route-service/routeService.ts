@@ -19,12 +19,12 @@ export const routeService = {
     return axiosInstance.get<ApiResponse<RouteResponse>>(`${ROUTE_BASE}/${id}`);
   },
 
-  searchRoutes(keyword: string, page = 0, size = 10) {
-    return axiosInstance.get<ApiResponse<RoutePage>>(`${ROUTE_BASE}/search`, { params: { keyword, page, size } });
+  searchRoutes(params: { keyword?: string; status?: string; originCityCode?: string; destinationCityCode?: string; page?: number; size?: number }) {
+    return axiosInstance.get<ApiResponse<RoutePage>>(`${ROUTE_BASE}/search`, { params });
   },
 
-  getPopularRoutes() {
-    return axiosInstance.get<ApiResponse<RouteResponse[]>>(`${ROUTE_BASE}/popular`);
+  getPopularRoutes(page = 0, size = 10) {
+    return axiosInstance.get<ApiResponse<RoutePage>>(`${ROUTE_BASE}/popular`, { params: { page, size } });
   },
 
   findRouteFromTo(originCityId: string, destinationCityId: string) {

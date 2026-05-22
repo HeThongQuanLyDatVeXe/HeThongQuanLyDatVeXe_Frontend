@@ -66,7 +66,7 @@ const FloatingInput: React.FC<FloatingInputProps> = ({
   );
 };
 
-type Step = 'email' | 'otp_reset';
+type Step = 'email' | 'otp' | 'reset_password';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -87,11 +87,11 @@ export const ForgotPasswordPage: React.FC = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
     if (resendCooldown > 0) {
-      timer = setInterval(() => setResendCooldown(c => c - 1), 1000);
+      timeoutId = setTimeout(() => setResendCooldown(c => c - 1), 1000);
     }
-    return () => clearInterval(timer);
+    return () => clearTimeout(timeoutId);
   }, [resendCooldown]);
 
   const startResendCooldown = () => setResendCooldown(60);
@@ -103,7 +103,7 @@ export const ForgotPasswordPage: React.FC = () => {
     
     try {
       await authService.forgotPassword({ email });
-      setStep('otp_reset');
+      setStep('otp');
       startResendCooldown();
       success('Đã gửi mã xác minh (OTP) đến email của bạn.');
     } catch (err: unknown) {
@@ -136,7 +136,7 @@ export const ForgotPasswordPage: React.FC = () => {
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join('');
     
@@ -144,6 +144,29 @@ export const ForgotPasswordPage: React.FC = () => {
       setFormError('Vui lòng nhập đủ 6 chữ số OTP.');
       return;
     }
+
+    setLoading(true);
+    setFormError('');
+
+    try {
+      await authService.verifyOtp({ email, otpCode: code, purpose: 'RESET_PASSWORD' });
+      setStep('reset_password');
+      success('Xác minh thành công, vui lòng nhập mật khẩu mới.');
+    } catch (err: unknown) {
+      const apiCode = getApiErrorCode(err);
+      if (apiCode === 10020) setFormError('Không tìm thấy mã OTP hoặc mã đã được sử dụng.');
+      else if (apiCode === 10021) setFormError('Mã OTP đã hết hạn. Vui lòng gửi lại.');
+      else if (apiCode === 10022) setFormError('Mã OTP không đúng. Vui lòng kiểm tra lại.');
+      else if (apiCode === 10024) setFormError('Đã nhập sai quá nhiều lần. Vui lòng gửi lại mã mới.');
+      else setFormError('Xác minh thất bại. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otp.join('');
     
     if (newPassword.length < 8) {
       setFormError('Mật khẩu mới phải có ít nhất 8 ký tự.');
@@ -168,9 +191,9 @@ export const ForgotPasswordPage: React.FC = () => {
       navigate(ROUTES.LOGIN);
     } catch (err: unknown) {
       const code2 = getApiErrorCode(err);
-      if (code2 === 1011) setFormError('Mã OTP đã hết hạn. Vui lòng gửi lại.');
-      else if (code2 === 1012) setFormError('Mã OTP không đúng. Vui lòng kiểm tra lại.');
-      else if (code2 === 1013) setFormError('Đã nhập sai quá nhiều lần. Vui lòng gửi lại mã mới.');
+      if (code2 === 10021) setFormError('Mã OTP đã hết hạn. Vui lòng gửi lại.');
+      else if (code2 === 10022) setFormError('Mã OTP không đúng. Vui lòng kiểm tra lại.');
+      else if (code2 === 10024) setFormError('Đã nhập sai quá nhiều lần. Vui lòng gửi lại mã mới.');
       else setFormError('Đổi mật khẩu thất bại. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -271,7 +294,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   </button>
                 </form>
               </>
-            ) : (
+            ) : step === 'otp' ? (
               <>
                 <div className="mb-6">
                   <button 
@@ -282,7 +305,7 @@ export const ForgotPasswordPage: React.FC = () => {
                     Đổi email
                   </button>
                   <h2 className="font-display text-3xl font-semibold mb-2">
-                    Thiết lập mật khẩu mới
+                    Xác minh OTP
                   </h2>
                   <p className="text-on-surface-variant opacity-80 text-sm">
                     Mã OTP đã được gửi đến email <span className="font-semibold text-primary">{email}</span>
@@ -291,7 +314,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
                 {formError && <div className="mb-6"><div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium">{formError}</div></div>}
 
-                <form onSubmit={handleResetPassword} className="space-y-6">
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
                   
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-on-surface-variant">Nhập mã OTP</label>
@@ -313,8 +336,42 @@ export const ForgotPasswordPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="h-px bg-outline-variant/30 my-6"></div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="shimmer-btn w-full h-[48px] bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <span>{loading ? 'Đang xác minh...' : 'Xác minh OTP'}</span>
+                    {!loading && <span className="material-symbols-outlined text-[20px]">check_circle</span>}
+                  </button>
+                </form>
 
+                <div className="text-center mt-6 select-none">
+                  <span className="text-on-surface-variant text-sm opacity-80">Chưa nhận được mã? </span>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0}
+                    className="text-sm font-semibold text-primary-hover hover:underline disabled:text-on-surface-variant/40 disabled:no-underline disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {resendCooldown > 0 ? `Gửi lại (${resendCooldown}s)` : 'Gửi lại mã'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <h2 className="font-display text-3xl font-semibold mb-2">
+                    Thiết lập mật khẩu mới
+                  </h2>
+                  <p className="text-on-surface-variant opacity-80 text-sm">
+                    Vui lòng nhập mật khẩu mới cho tài khoản của bạn.
+                  </p>
+                </div>
+
+                {formError && <div className="mb-6"><div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium">{formError}</div></div>}
+
+                <form onSubmit={handleResetPassword} className="space-y-6">
                   <FloatingInput
                     id="newPassword"
                     label="Mật khẩu mới (ít nhất 8 ký tự)"
@@ -346,18 +403,6 @@ export const ForgotPasswordPage: React.FC = () => {
                     {!loading && <span className="material-symbols-outlined text-[20px]">lock_reset</span>}
                   </button>
                 </form>
-
-                <div className="text-center mt-6 select-none">
-                  <span className="text-on-surface-variant text-sm opacity-80">Chưa nhận được mã? </span>
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={resendCooldown > 0}
-                    className="text-sm font-semibold text-primary-hover hover:underline disabled:text-on-surface-variant/40 disabled:no-underline disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {resendCooldown > 0 ? `Gửi lại (${resendCooldown}s)` : 'Gửi lại mã'}
-                  </button>
-                </div>
               </>
             )}
           </div>

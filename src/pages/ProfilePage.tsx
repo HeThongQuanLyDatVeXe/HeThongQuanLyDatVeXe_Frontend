@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/user-service/useAuth';
 import { userService } from '../services/user-service/userService';
-import { authService } from '../services/user-service/authService';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
 import { Alert } from '../components/common/Alert';
@@ -147,8 +146,9 @@ export const ProfilePage: React.FC = () => {
     setPwMsg(null);
     try {
       await userService.changePassword({ oldPassword: pwData.oldPassword, newPassword: pwData.newPassword });
-      setPwMsg({ type: 'success', text: 'Đổi mật khẩu thành công!' });
+      setPwMsg({ type: 'success', text: user?.hasPassword ? 'Đổi mật khẩu thành công!' : 'Tạo mật khẩu thành công!' });
       setPwData({ oldPassword: '', newPassword: '', confirm: '' });
+      await refreshUser();
     } catch (err: unknown) {
       const code = getApiErrorCode(err);
       if (code === 1015) setPwMsg({ type: 'error', text: 'Tài khoản này đăng nhập qua Google, chưa có mật khẩu.' });

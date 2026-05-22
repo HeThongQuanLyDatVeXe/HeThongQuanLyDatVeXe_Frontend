@@ -62,7 +62,7 @@ export const adminRouteService = {
   },
 
   deletePickupPoint(id: string) {
-    return axiosInstance.delete<ApiResponse<Void>>(`${ADMIN_PICKUP_BASE}/${id}`);
+    return axiosInstance.delete<ApiResponse<void>>(`${ADMIN_PICKUP_BASE}/${id}`);
   },
 
   createDropoffPoint(data: CreatePointRequest) {
@@ -74,6 +74,6 @@ export const adminRouteService = {
   },
 
   deleteDropoffPoint(id: string) {
-    return axiosInstance.delete<ApiResponse<Void>>(`${ADMIN_DROPOFF_BASE}/${id}`);
+    return axiosInstance.delete<ApiResponse<void>>(`${ADMIN_DROPOFF_BASE}/${id}`);
   },
 };
