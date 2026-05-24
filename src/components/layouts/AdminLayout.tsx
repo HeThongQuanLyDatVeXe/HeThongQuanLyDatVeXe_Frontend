@@ -31,19 +31,18 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Thành phố',    path: ROUTES.ADMIN_CITIES,    icon: 'location_city' },
       { label: 'Điểm dừng',    path: ROUTES.ADMIN_POINTS,    icon: 'location_on' },
       { label: 'Lịch trình',   path: ROUTES.ADMIN_TRIPS,     icon: 'calendar_month' },
+      { label: 'Mẫu lịch trình', path: ROUTES.ADMIN_TRIP_TEMPLATES, icon: 'event_repeat' },
       { label: 'Tài xế',       path: ROUTES.ADMIN_DRIVERS,   icon: 'badge' },
-      { label: 'Vé',           path: '#',                    icon: 'confirmation_number' },
       { label: 'Xe',           path: ROUTES.ADMIN_VEHICLES,  icon: 'directions_bus' },
+      { label: 'Loại xe',      path: ROUTES.ADMIN_VEHICLE_TYPES, icon: 'category' },
+      { label: 'Bảo trì',      path: ROUTES.ADMIN_MAINTENANCE, icon: 'build' },
     ],
   },
   {
     label: 'Dữ liệu & Hệ thống',
     items: [
       { label: 'Người dùng',   path: ROUTES.ADMIN_USERS,     icon: 'group' },
-      { label: 'Vai trò',      path: ROUTES.ADMIN_ROLES,     icon: 'security' },
-      { label: 'Quyền hạn',   path: ROUTES.ADMIN_PERMISSIONS, icon: 'shield_person' },
-      { label: 'Giá vé',      path: ROUTES.ADMIN_PRICING,     icon: 'payments' },
-      { label: 'Hệ thống',    path: '#',                    icon: 'settings' },
+      { label: 'Giá vé',      path: ROUTES.ADMIN_PRICING,     icon: 'payments' }
     ],
   },
 ];

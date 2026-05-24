@@ -16,15 +16,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = cookieUtils.getAccessToken();
     if (!token) {
       setUser(null);
+      window.localStorage.removeItem('user_id');
       setIsLoading(false);
       return;
     }
     try {
       const res = await userService.getProfile();
-      setUser(res.data.result ?? null);
+      const profile = res.data.result ?? null;
+      setUser(profile);
+      if (profile?.id) {
+        window.localStorage.setItem('user_id', profile.id);
+      } else {
+        window.localStorage.removeItem('user_id');
+      }
     } catch {
       setUser(null);
       cookieUtils.clearTokens();
+      window.localStorage.removeItem('user_id');
     } finally {
       setIsLoading(false);
     }
@@ -55,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try { await authService.logout({ accessToken }); } catch { /* ignore error */ }
     }
     cookieUtils.clearTokens();
+    window.localStorage.removeItem('user_id');
     setUser(null);
   }, []);
 

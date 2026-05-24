@@ -2,6 +2,7 @@ export const ROUTES = {
 
   HOME: '/',
   ROUTES: '/tuyen-duong',
+  ROUTE_TRIPS: '/tuyen-duong/:routeId/chuyen-xe',
   TRIP_DETAIL: '/tuyen-duong/:id',
   SEAT_SELECTION: '/tuyen-duong/:id/chon-ghe',
   CHECKOUT: '/tuyen-duong/:id/thanh-toan',
@@ -26,7 +27,14 @@ export const ROUTES = {
   ADMIN_CITIES: '/admin/cities',
   ADMIN_POINTS: '/admin/points',
   ADMIN_VEHICLES: '/admin/vehicles',
+  ADMIN_VEHICLE_TYPES: '/admin/vehicle-types',
+  ADMIN_MAINTENANCE: '/admin/maintenance',
+  ADMIN_SEAT_LAYOUTS: '/admin/vehicles/:id/seat-layout',
+  ADMIN_TRIP_OVERRIDES: '/admin/trips/:id/seat-overrides',
+  ADMIN_TRIP_DETAIL: '/admin/trips/:id',
   ADMIN_TRIPS: '/admin/trips',
+  ADMIN_TRIP_TEMPLATES: '/admin/trip-templates',
   ADMIN_DRIVERS: '/admin/drivers',
+  ADMIN_DRIVER_DETAIL: '/admin/drivers/:id',
   ADMIN_PRICING: '/admin/pricing',
 } as const;

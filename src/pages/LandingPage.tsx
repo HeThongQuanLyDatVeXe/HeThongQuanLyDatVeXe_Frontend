@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { routeService } from '../services/route-service/routeService';
 import { priceService } from '../services/price-service/priceService';
-import type { RouteResponse } from '../types/route-service/response';
+import type { RouteResponse, CityResponse } from '../types/route-service/response';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
+import { useToast } from '../contexts/ToastContext';
 import { 
   MapPin, 
   ArrowsLeftRight, 
@@ -147,15 +148,28 @@ const CountdownTimer: React.FC = () => {
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { error: showError } = useToast();
 
   // Search overlay states
   const [tripType, setTripType] = useState<'one-way' | 'round-trip'>('one-way');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [fromCityId, setFromCityId] = useState('');
+  const [toCityId, setToCityId] = useState('');
   const [date, setDate] = useState('');
   const [passengers, setPassengers] = useState(1);
   const [showPassengerMenu, setShowPassengerMenu] = useState(false);
   const passengerMenuRef = useRef<HTMLDivElement>(null);
+  const [cities, setCities] = useState<CityResponse[]>([]);
+
+  // Load cities for search dropdowns
+  useEffect(() => {
+    routeService.getCities()
+      .then(res => {
+        const payload = res.data.result || res.data.data;
+        const list = (payload as any)?.content || (Array.isArray(payload) ? payload : []);
+        setCities(list);
+      })
+      .catch(() => {});
+  }, []);
 
   // Close passenger menu on clicking outside
   useEffect(() => {
@@ -169,16 +183,20 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   const handleSwapCities = () => {
-    const temp = from;
-    setFrom(to);
-    setTo(temp);
+    const temp = fromCityId;
+    setFromCityId(toCityId);
+    setToCityId(temp);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fromCityId || !toCityId) {
+      showError('Vui lòng chọn điểm đi và điểm đến');
+      return;
+    }
     const params = new URLSearchParams();
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
+    params.set('originCityId', fromCityId);
+    params.set('destCityId', toCityId);
     if (date) params.set('date', date);
     if (passengers > 1) params.set('passengers', passengers.toString());
     if (tripType === 'round-trip') params.set('roundTrip', 'true');
@@ -202,13 +220,13 @@ export const LandingPage: React.FC = () => {
           
           // Enhance with price service
           const enhancedRoutes = await Promise.all(
-            topRoutes.map(async (route) => {
+            topRoutes.map(async (route: any) => {
               try {
                 const priceRes = await priceService.getPricingByRoute(route.id);
                 const pricePayload = priceRes.data.result || priceRes.data.data;
                 const tiers = pricePayload?.priceTiers;
                 if (tiers && tiers.length > 0) {
-                  const lowestPrice = Math.min(...tiers.map(t => t.minPrice || t.basePrice));
+                  const lowestPrice = Math.min(...tiers.map((t: any) => t.minPrice || t.basePrice));
                   route.basePrice = lowestPrice;
                 }
               } catch (e) {
@@ -352,15 +370,16 @@ export const LandingPage: React.FC = () => {
               <div className="lg:col-span-4 flex flex-col gap-2">
                 <label className="font-semibold text-xs text-white/70 uppercase tracking-wider">Điểm đi</label>
                 <div className="relative">
-                  <MapPin size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
-                  <input
-                    type="text"
+                  <MapPin size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none z-10" />
+                  <select
                     required
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                    placeholder="Hà Nội, TPHCM..."
-                    className="w-full pl-12 pr-4 py-4 bg-white/10 rounded-2xl border border-white/10 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-white/30 backdrop-blur-md transition-all duration-300"
-                  />
+                    value={fromCityId}
+                    onChange={(e) => setFromCityId(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-white/10 rounded-2xl border border-white/10 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300 appearance-none cursor-pointer [&>option]:text-on-background [&>option]:bg-surface"
+                  >
+                    <option value="">Chọn điểm đi</option>
+                    {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -380,15 +399,16 @@ export const LandingPage: React.FC = () => {
               <div className="lg:col-span-4 flex flex-col gap-2">
                 <label className="font-semibold text-xs text-white/70 uppercase tracking-wider">Điểm đến</label>
                 <div className="relative">
-                  <MapPin size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
-                  <input
-                    type="text"
+                  <MapPin size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none z-10" />
+                  <select
                     required
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    placeholder="Đà Nẵng, Đà Lạt..."
-                    className="w-full pl-12 pr-4 py-4 bg-white/10 rounded-2xl border border-white/10 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-white/30 backdrop-blur-md transition-all duration-300"
-                  />
+                    value={toCityId}
+                    onChange={(e) => setToCityId(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-white/10 rounded-2xl border border-white/10 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300 appearance-none cursor-pointer [&>option]:text-on-background [&>option]:bg-surface"
+                  >
+                    <option value="">Chọn điểm đến</option>
+                    {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -526,14 +546,13 @@ export const LandingPage: React.FC = () => {
               </h2>
               <div className="w-20 h-1 bg-primary mt-4 rounded-full"></div>
             </div>
-            <a 
-              href="#" 
-              onClick={(e) => e.preventDefault()}
-              className="text-primary font-label-caps text-xs tracking-wider uppercase flex items-center gap-2 hover:gap-3.5 transition-all duration-300 group font-bold"
+            <button 
+              onClick={() => navigate(ROUTES.ROUTES)}
+              className="text-primary font-label-caps text-xs tracking-wider uppercase flex items-center gap-2 hover:gap-3.5 transition-all duration-300 group font-bold bg-transparent border-none cursor-pointer"
             >
               <span>Xem tất cả</span>
               <ArrowRight size={14} weight="bold" />
-            </a>
+            </button>
           </div>
 
           {loadingPopular ? (
@@ -543,43 +562,50 @@ export const LandingPage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               {popularRoutes.map((route, i) => {
-                const from = route.originCityName || 'Không xác định';
-                const to = route.destinationCityName || 'Không xác định';
+                const fromName = route.originCityName || 'Không xác định';
+                const toName = route.destinationCityName || 'Không xác định';
                 const title = route.name || 'Hành trình kết nối'; 
-                const priceNum = route.basePrice || 350000;
-                const price = `${priceNum.toLocaleString()}₫`;
-                const image = 'https://placehold.co/400x300/F4600C/FFFFFF/png?text=' + encodeURIComponent(to);
+                const priceNum = (route as any).basePrice;
+                const price = priceNum ? `${priceNum.toLocaleString()}₫` : null;
+                const distanceKm = route.distanceKm;
+                const durationMin = route.durationMinutes;
+                const durationStr = durationMin ? `${Math.floor(durationMin / 60)}h${durationMin % 60 > 0 ? `${durationMin % 60}p` : ''}` : null;
+
+                const handleRouteClick = () => {
+                  navigate(`/tuyen-duong/${route.id}/chuyen-xe`);
+                };
 
                 return (
-                  <div key={i} className="group cursor-pointer flex flex-col">
-                    {/* Image panel */}
-                    <div className="relative h-64 rounded-2xl overflow-hidden shadow-md mb-4 bg-slate-100">
-                      <img
-                        alt={to}
-                        src={image}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 select-none pointer-events-none"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90" />
-                      
-                      <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <p className="font-label-caps text-[10px] opacity-75 uppercase tracking-wider" style={{ letterSpacing: '0.05em' }}>
-                          {from} → {to}
+                  <div key={route.id || i} className="group cursor-pointer flex flex-col" onClick={handleRouteClick}>
+                    {/* Route card */}
+                    <div className="relative h-64 rounded-2xl overflow-hidden shadow-md mb-4 bg-[#1A1410] flex flex-col items-center justify-center">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_#F4600C22_0%,_transparent_70%)] pointer-events-none" />
+                      <div className="relative z-10 flex flex-col items-center justify-center h-full p-6 text-center">
+                        <span className="material-symbols-outlined text-primary text-4xl mb-3">directions_bus</span>
+                        <p className="font-label-caps text-[10px] text-white/60 uppercase tracking-wider" style={{ letterSpacing: '0.05em' }}>
+                          {fromName} → {toName}
                         </p>
-                        <p className="font-headline-md text-base md:text-lg font-bold leading-tight mt-1">{title}</p>
+                        <p className="font-headline-md text-base md:text-lg font-bold text-white leading-tight mt-2">{title}</p>
+                        <div className="flex gap-3 mt-3 text-white/50 text-xs">
+                          {distanceKm ? <span>{distanceKm} km</span> : null}
+                          {distanceKm && durationStr ? <span>•</span> : null}
+                          {durationStr ? <span>~{durationStr}</span> : null}
+                        </div>
                       </div>
                       
-                      <div className="absolute top-4 right-4 bg-primary text-on-primary px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                        Từ {price}
-                      </div>
+                      {price && (
+                        <div className="absolute top-4 right-4 bg-primary text-on-primary px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                          Từ {price}
+                        </div>
+                      )}
                     </div>
 
                     {/* Animated Order Button */}
                     <button 
-                      onClick={() => alert(`Tính năng đặt vé đang phát triển! (Tuyến ${from} - ${to})`)}
+                      onClick={(e) => { e.stopPropagation(); handleRouteClick(); }}
                       className="w-full py-3 border border-primary/20 hover:border-primary text-primary rounded-xl font-semibold text-xs tracking-wider uppercase hover:bg-primary hover:text-on-primary transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm cursor-pointer"
                     >
-                      Đặt ngay
+                      Tìm chuyến
                     </button>
                   </div>
                 );

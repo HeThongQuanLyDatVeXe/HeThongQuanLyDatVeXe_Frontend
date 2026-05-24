@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { LandingPage } from '../pages/LandingPage';
 import { RoutesPage } from '../pages/RoutesPage';
+import { RouteTripsPage } from '../pages/RouteTripsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
@@ -16,8 +17,15 @@ import { AdminRoutesPage } from '../pages/admin-routes/AdminRoutesPage';
 import { AdminCitiesPage } from '../pages/admin-routes/AdminCitiesPage';
 import { AdminPointsPage } from '../pages/admin-routes/AdminPointsPage';
 import { AdminVehiclesPage } from '../pages/admin-vehicle/AdminVehiclesPage';
+import { AdminVehicleTypesPage } from '../pages/admin-vehicle/AdminVehicleTypesPage';
+import { AdminMaintenancePage } from '../pages/admin-vehicle/AdminMaintenancePage';
+import { AdminSeatLayoutsPage } from '../pages/admin-vehicle/AdminSeatLayoutsPage';
+import { AdminTripSeatOverridesPage } from '../pages/admin-vehicle/AdminTripSeatOverridesPage';
 import { AdminTripsPage } from '../pages/admin-trip/AdminTripsPage';
+import { AdminTripDetailPage } from '../pages/admin-trip/AdminTripDetailPage';
+import { AdminTripTemplatesPage } from '../pages/admin-trip/AdminTripTemplatesPage';
 import { AdminDriversPage } from '../pages/admin-driver/AdminDriversPage';
+import { AdminDriverDetailPage } from '../pages/admin-driver/AdminDriverDetailPage';
 import { AdminPricesPage } from '../pages/admin-price/AdminPricesPage';
 import { GoogleCallbackPage } from '../pages/GoogleCallbackPage';
 import { useAuth } from '../hooks/user-service/useAuth';
@@ -80,6 +88,7 @@ export const AppRouter: React.FC = () => {
             <Routes>
                 <Route path={ROUTES.HOME} element={<LandingPage />} />
                 <Route path={ROUTES.ROUTES} element={<RoutesPage />} />
+                <Route path={ROUTES.ROUTE_TRIPS} element={<RouteTripsPage />} />
                 <Route path={ROUTES.TRIP_DETAIL} element={<TripDetailPage />} />
                 <Route path={ROUTES.SEAT_SELECTION} element={<SeatSelectionPage />} />
                 <Route path={ROUTES.CHECKOUT} element={<CheckoutPage />} />
@@ -188,6 +197,51 @@ export const AppRouter: React.FC = () => {
                 />
 
                 <Route
+                    path={ROUTES.ADMIN_VEHICLE_TYPES}
+                    element={(
+                        <AdminRoute>
+                            <AdminVehicleTypesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_MAINTENANCE}
+                    element={(
+                        <AdminRoute>
+                            <AdminMaintenancePage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_SEAT_LAYOUTS}
+                    element={(
+                        <AdminRoute>
+                            <AdminSeatLayoutsPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_TRIP_OVERRIDES}
+                    element={(
+                        <AdminRoute>
+                            <AdminTripSeatOverridesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_TRIP_DETAIL}
+                    element={(
+                        <AdminRoute>
+                            <AdminTripDetailPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
                     path={ROUTES.ADMIN_TRIPS}
                     element={(
                         <AdminRoute>
@@ -197,10 +251,28 @@ export const AppRouter: React.FC = () => {
                 />
 
                 <Route
+                    path={ROUTES.ADMIN_TRIP_TEMPLATES}
+                    element={(
+                        <AdminRoute>
+                            <AdminTripTemplatesPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
                     path={ROUTES.ADMIN_DRIVERS}
                     element={(
                         <AdminRoute>
                             <AdminDriversPage />
+                        </AdminRoute>
+                    )}
+                />
+
+                <Route
+                    path={ROUTES.ADMIN_DRIVER_DETAIL}
+                    element={(
+                        <AdminRoute>
+                            <AdminDriverDetailPage />
                         </AdminRoute>
                     )}
                 />

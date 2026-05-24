@@ -1,44 +1,116 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
+import { publicTripService } from '../services/trip-service/publicTripService';
+import type { TripResponse, SeatInfo } from '../types/trip-service/Trip';
 
 export const SeatSelectionPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Recover passengers count if passed from previous page
+    // State passed from TripDetailPage
     const passedState = location.state as { passengers?: number; currentTrip?: any } | null;
 
-    const currentTrip = passedState?.currentTrip || {
-        id: id || 'default',
-        from: 'Sài Gòn',
-        to: 'Đà Lạt',
-        duration: '7 tiếng di chuyển',
-        price: 420000,
-        operator: 'Phương Trang',
-        vehicleType: 'Giường nằm VIP 34 chỗ'
+    // ── Trip data: fetch from API if not passed ──────────────────────────
+    const [trip, setTrip] = useState<TripResponse | null>(null);
+    const [loadingTrip, setLoadingTrip] = useState(!passedState?.currentTrip);
+
+    useEffect(() => {
+        if (passedState?.currentTrip) return; // Already have data from navigation state
+        if (!id) return;
+        const fetchTrip = async () => {
+            setLoadingTrip(true);
+            try {
+                const res = await publicTripService.getTripById(id);
+                const payload = res.data.result || res.data.data;
+                if (payload) setTrip(payload);
+            } catch (err) {
+                console.error('Failed to fetch trip', err);
+            } finally {
+                setLoadingTrip(false);
+            }
+        };
+        fetchTrip();
+    }, [id, passedState]);
+
+    // Build currentTrip from either passed state or fetched data
+    const ct = passedState?.currentTrip || (trip ? {
+        id: trip.id,
+        from: trip.route?.originCityName || '—',
+        to: trip.route?.destinationCityName || '—',
+        routeName: trip.route?.name || '',
+        duration: trip.route?.durationMinutes
+            ? `${Math.floor(trip.route.durationMinutes / 60)} giờ ${trip.route.durationMinutes % 60 > 0 ? `${trip.route.durationMinutes % 60} phút` : ''}`
+            : '',
+        price: trip.prices?.[0]?.finalPrice || trip.prices?.[0]?.basePrice || 0,
+        vehicleType: trip.vehicle?.vehicleTypeName || '—',
+        vehicleFullName: [trip.vehicle?.brand, trip.vehicle?.model].filter(Boolean).join(' ') || '',
+        licensePlate: trip.vehicle?.licensePlate || '—',
+        totalSeats: trip.vehicle?.totalSeats || trip.totalSeats || 0,
+        availableSeats: trip.availableSeats ?? 0,
+        departureDatetime: trip.departureDatetime,
+        arrivalDatetime: trip.arrivalDatetime,
+        tripCode: trip.tripCode || '',
+        seatType: trip.prices?.[0]?.seatType || '',
+    } : null);
+
+    // ── Format helpers ───────────────────────────────────────────────────
+    const formatTime = (isoStr: string | undefined) => {
+        if (!isoStr) return '--:--';
+        return new Date(isoStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     };
 
-    // State for selected seats
-    // We can pre-select A12 and A13 to match the template default, but make it fully interactive!
-    const [selectedSeats, setSelectedSeats] = useState<string[]>(['A12', 'A13']);
+    const formatShortDate = (isoStr: string | undefined) => {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        return `${dayNames[d.getDay()]}, ${day < 10 ? '0' + day : day} Th${month}`;
+    };
+
+    // ── Seat map: fetch from API ─────────────────────────────────────────
+    const [seatMap, setSeatMap] = useState<SeatInfo[]>([]);
+    const [soldSeats, setSoldSeats] = useState<Set<string>>(new Set());
+    const [loadingSeats, setLoadingSeats] = useState(true);
+
+    useEffect(() => {
+        if (!id) return;
+        const fetchSeatMap = async () => {
+            setLoadingSeats(true);
+            try {
+                const res = await publicTripService.getSeatMap(id);
+                const payload = res.data.result || res.data.data;
+                if (payload && payload.seats) {
+                    setSeatMap(payload.seats);
+                    const sold = new Set<string>();
+                    payload.seats.forEach((seat: SeatInfo) => {
+                        if (seat.status !== 'AVAILABLE') {
+                            sold.add(seat.seatNumber);
+                        }
+                    });
+                    setSoldSeats(sold);
+                }
+            } catch (error) {
+                console.error("Failed to fetch seat map", error);
+            } finally {
+                setLoadingSeats(false);
+            }
+        };
+        fetchSeatMap();
+    }, [id]);
+
+    // ── Seat selection state ─────────────────────────────────────────────
+    const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
     const [activeDeck, setActiveDeck] = useState<'lower' | 'upper'>('lower');
 
-    // Scroll to top
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
 
-    // Set of sold seats
-    const soldSeats = new Set<string>([
-        'A01', 'A03', 'A15', // Lower deck sold
-        'B04', 'B10', 'B16'  // Upper deck sold
-    ]);
-
     const handleSeatClick = (seatCode: string) => {
-        if (soldSeats.has(seatCode)) return; // Don't allow selecting sold seats
-
+        if (soldSeats.has(seatCode)) return;
         setSelectedSeats((prev) => {
             if (prev.includes(seatCode)) {
                 return prev.filter((s) => s !== seatCode);
@@ -53,16 +125,38 @@ export const SeatSelectionPage: React.FC = () => {
             alert('Vui lòng chọn ít nhất một ghế ngồi để tiếp tục!');
             return;
         }
-        navigate(`/tuyen-duong/${currentTrip.id}/thanh-toan`, {
+        const price = ct?.price || 0;
+        navigate(`/tuyen-duong/${ct?.id || id}/thanh-toan`, {
             state: {
                 selectedSeats,
-                currentTrip,
-                totalAmount: currentTrip.price * selectedSeats.length
+                currentTrip: ct,
+                totalAmount: price * selectedSeats.length
             }
         });
     };
 
-    const renderSeatButton = (seatCode: string) => {
+    // ── Dynamic seat rendering from API data ─────────────────────────────
+    // Group seats by floor
+    const lowerDeckSeats = seatMap.filter(s => s.floor === 1 || s.seatNumber.startsWith('A'));
+    const upperDeckSeats = seatMap.filter(s => s.floor === 2 || s.seatNumber.startsWith('B'));
+    const currentDeckSeats = activeDeck === 'lower' ? lowerDeckSeats : upperDeckSeats;
+    const hasMultipleDecks = upperDeckSeats.length > 0;
+
+    // Group by rows for rendering
+    const groupByRow = (seats: SeatInfo[]) => {
+        const rows: Record<number, SeatInfo[]> = {};
+        seats.forEach(s => {
+            const row = s.rowNumber || 0;
+            if (!rows[row]) rows[row] = [];
+            rows[row].push(s);
+        });
+        // Sort each row by column
+        Object.values(rows).forEach(r => r.sort((a, b) => (a.columnNumber || 0) - (b.columnNumber || 0)));
+        return Object.entries(rows).sort(([a], [b]) => Number(a) - Number(b));
+    };
+
+    const renderSeatButton = (seat: SeatInfo) => {
+        const seatCode = seat.seatNumber;
         const isSold = soldSeats.has(seatCode);
         const isSelected = selectedSeats.includes(seatCode);
 
@@ -101,9 +195,81 @@ export const SeatSelectionPage: React.FC = () => {
         );
     };
 
+    // Fallback static layout when seat map has no row/col info
+    const renderFallbackLayout = (seats: SeatInfo[]) => {
+        // Arrange in 2-column layout with aisle
+        const rows: SeatInfo[][] = [];
+        for (let i = 0; i < seats.length; i += 2) {
+            rows.push(seats.slice(i, i + 2));
+        }
+        return (
+            <div className="grid grid-cols-3 gap-y-6 gap-x-4">
+                {rows.map((row, ri) => (
+                    <React.Fragment key={ri}>
+                        <div className="col-span-1 flex justify-center">{row[0] && renderSeatButton(row[0])}</div>
+                        <div className="col-span-1"></div>
+                        <div className="col-span-1 flex justify-center">{row[1] && renderSeatButton(row[1])}</div>
+                    </React.Fragment>
+                ))}
+            </div>
+        );
+    };
+
+    // Smart layout when seat map has row/col info
+    const renderSmartLayout = (seats: SeatInfo[]) => {
+        const rowGroups = groupByRow(seats);
+        const maxCols = Math.max(...seats.map(s => s.columnNumber || 1), 2);
+
+        return (
+            <div className="space-y-4">
+                {rowGroups.map(([rowNum, rowSeats]) => (
+                    <div key={rowNum} className="flex justify-center gap-3">
+                        {Array.from({ length: maxCols }, (_, colIdx) => {
+                            const seat = rowSeats.find(s => (s.columnNumber || 0) === colIdx + 1);
+                            // Insert aisle gap in the middle
+                            const isAisle = maxCols >= 3 && colIdx === Math.floor(maxCols / 2) - 1;
+                            return (
+                                <React.Fragment key={colIdx}>
+                                    <div className="flex justify-center">
+                                        {seat ? renderSeatButton(seat) : <div className="w-16 h-20" />}
+                                    </div>
+                                    {isAisle && <div className="w-4" />}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    const hasSeatPositionInfo = currentDeckSeats.some(s => s.rowNumber > 0 && s.columnNumber > 0);
+
+    // ── Loading / Error states ───────────────────────────────────────────
+    if (loadingTrip) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!ct) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+                <span className="material-symbols-outlined text-6xl text-outline">error_outline</span>
+                <h2 className="text-xl font-bold text-on-surface">Không tìm thấy thông tin chuyến đi</h2>
+                <button onClick={() => navigate(ROUTES.ROUTES)} className="px-6 py-2 bg-primary text-on-primary rounded-xl cursor-pointer">
+                    Quay lại tuyến đường
+                </button>
+            </div>
+        );
+    }
+
+    const price = Number(ct.price) || 0;
+
     return (
         <div className="min-h-screen bg-background text-on-background font-body-md antialiased noise-bg relative pb-32">
-            {/* Grain/Noise Overlay */}
             <div className="grain-overlay" />
 
             {/* Top Navigation */}
@@ -117,7 +283,7 @@ export const SeatSelectionPage: React.FC = () => {
                         Đi Về Nhà
                     </div>
                     <button 
-                        onClick={() => navigate(`/tuyen-duong/${currentTrip.id}`)}
+                        onClick={() => navigate(`/tuyen-duong/${ct.id}`)}
                         className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none outline-none font-bold text-sm tracking-wider uppercase"
                     >
                         <span>Hủy & Quay Lại</span>
@@ -131,24 +297,24 @@ export const SeatSelectionPage: React.FC = () => {
                 
                 {/* LEFT COLUMN: Summary (Sticky) */}
                 <aside className="w-full md:w-1/3 md:sticky md:top-32 h-fit space-y-md text-left">
-                    {/* Trip details card */}
                     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-[0_8px_20px_rgba(92,64,51,0.05)]">
                         <h2 className="text-xl font-bold text-primary mb-md" style={{ fontFamily: 'Playfair Display, serif' }}>
                             Chi Tiết Chuyến Đi
                         </h2>
                         
                         <div className="flex flex-col gap-sm relative">
-                            {/* Dash Line */}
                             <div className="absolute left-3 top-6 bottom-6 w-px border-l-2 border-dashed border-outline-variant z-0"></div>
                             
-                            {/* Source */}
+                            {/* Departure */}
                             <div className="flex items-start gap-4 relative z-10">
                                 <div className="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-primary flex items-center justify-center mt-1">
                                     <span className="w-2 h-2 rounded-full bg-primary"></span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.from} - BẾN XE ĐÓN</p>
-                                    <p className="text-lg text-on-surface font-semibold">18:00 • T6, 24 Th11</p>
+                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{ct.from} - BẾN XE ĐÓN</p>
+                                    <p className="text-lg text-on-surface font-semibold">
+                                        {formatTime(ct.departureDatetime)} • {formatShortDate(ct.departureDatetime)}
+                                    </p>
                                 </div>
                             </div>
                             
@@ -158,26 +324,27 @@ export const SeatSelectionPage: React.FC = () => {
                                     <span className="material-symbols-outlined text-[14px] text-tertiary-container font-bold">location_on</span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.to} - BẾN XE ĐẾN</p>
-                                    <p className="text-lg text-on-surface font-semibold">01:00 • T7, 25 Th11</p>
+                                    <p className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{ct.to} - BẾN XE ĐẾN</p>
+                                    <p className="text-lg text-on-surface font-semibold">
+                                        {formatTime(ct.arrivalDatetime)} • {formatShortDate(ct.arrivalDatetime)}
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="h-px bg-outline-variant w-full my-md"></div>
                         
-                        {/* Operator */}
+                        {/* Vehicle info */}
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-surface-container-high p-1 border border-outline-variant flex items-center justify-center overflow-hidden">
-                                <img 
-                                    alt="Operator Logo" 
-                                    className="w-full h-full object-cover" 
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuEB2Q-JwrrQERd-PuDRc2EIgr2fGvsL0Vecrvw-Hefzu9ghwAns0PYBbO3NUGErTlTJdTFTUKr3du6IerDV6dF5IEs0FoNLC42IDq8Nj3qPMkcT8WCc5wpGWpYyprh713Ppqj0ATOdxtMVW586uzGAsQkQn655dyzTndrV0yJOySEE21Fvnk6_3oYWy12wSRrwFBLcrDK8LMZhg5Ni5DANAkih_YPW4MVQIKsVHpVajP50aG8NB3x7Xg9DUkY_JmyJOp1-hV77NU" 
-                                />
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 border border-outline-variant flex items-center justify-center overflow-hidden">
+                                <span className="material-symbols-outlined text-primary text-2xl">directions_bus</span>
                             </div>
                             <div>
-                                <p className="text-base font-semibold text-on-surface">{currentTrip.operator}</p>
-                                <p className="text-sm text-on-surface-variant">{currentTrip.vehicleType}</p>
+                                <p className="text-base font-semibold text-on-surface">{ct.vehicleType}</p>
+                                <p className="text-sm text-on-surface-variant">
+                                    {ct.vehicleFullName && ct.vehicleFullName !== ct.vehicleType ? ct.vehicleFullName : ''} 
+                                    {ct.licensePlate ? ` • ${ct.licensePlate}` : ''}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -214,10 +381,10 @@ export const SeatSelectionPage: React.FC = () => {
                         Chọn Chỗ Ngồi
                     </h1>
                     <p className="text-sm text-on-surface-variant text-center mb-lg">
-                        {activeDeck === 'lower' ? 'Tầng Dưới' : 'Tầng Trên'} • Giường Nằm VIP
+                        {hasMultipleDecks ? (activeDeck === 'lower' ? 'Tầng Dưới' : 'Tầng Trên') : 'Sơ đồ ghế'} • {ct.vehicleType}
                     </p>
                     
-                    {/* Legend info */}
+                    {/* Legend */}
                     <div className="flex gap-md mb-xl justify-center w-full flex-wrap">
                         <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded border border-outline-variant bg-surface-container-lowest"></div>
@@ -233,141 +400,55 @@ export const SeatSelectionPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Bus layout outline */}
-                    <div className="relative border-4 border-outline-variant rounded-[40px] rounded-t-[80px] p-8 w-full max-w-sm mx-auto bg-surface">
-                        {/* Steering wheel */}
-                        <div className="flex justify-start mb-8 opacity-50">
-                            <span className="material-symbols-outlined text-on-surface-variant text-2xl">radio_button_unchecked</span>
+                    {/* Seat map content */}
+                    {loadingSeats ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                         </div>
-
-                        {/* Seat grids (3 columns: Left, Aisle, Right) */}
-                        <div className="grid grid-cols-3 gap-y-6 gap-x-4">
-                            {/* Generate dynamic seat map rows depending on active deck */}
-                            {activeDeck === 'lower' ? (
-                                <>
-                                    {/* Row 1 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A01')}</div>
-                                    <div className="col-span-1"></div> {/* Aisle */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A02')}</div>
-
-                                    {/* Row 2 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A03')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A04')}</div>
-
-                                    {/* Row 3 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A05')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A06')}</div>
-
-                                    {/* Row 4 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A07')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A08')}</div>
-
-                                    {/* Row 5 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A12')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('A13')}</div>
-
-                                    {/* Row 6 (Full Width Back) */}
-                                    <div className="col-span-3 grid grid-cols-5 gap-2 mt-4 pt-4 border-t border-dashed border-outline-variant">
-                                        {['A14', 'A15', 'A16', 'A17', 'A18'].map((seat) => (
-                                            <div key={seat} className="col-span-1 h-20 flex justify-center">
-                                                {/* Mini custom render since width differs */}
-                                                {soldSeats.has(seat) ? (
-                                                    <button disabled className="w-full h-full rounded-xl bg-surface-variant flex flex-col items-center justify-center opacity-70">
-                                                        <span className="font-body-md text-[10px] font-semibold text-on-surface-variant">{seat}</span>
-                                                    </button>
-                                                ) : selectedSeats.includes(seat) ? (
-                                                    <button onClick={() => handleSeatClick(seat)} className="w-full h-full rounded-xl bg-primary text-on-primary flex flex-col items-center justify-center cursor-pointer font-bold text-[10px] ring-2 ring-primary ring-offset-2 ring-offset-surface">
-                                                        {seat}
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => handleSeatClick(seat)} className="w-full h-full rounded-xl border-2 border-outline-variant bg-surface-container-lowest flex flex-col items-center justify-center cursor-pointer text-on-surface font-semibold text-[10px] hover:border-primary">
-                                                        {seat}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    {/* Upper Deck (B-series seats) */}
-                                    {/* Row 1 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B01')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B02')}</div>
-
-                                    {/* Row 2 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B03')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B04')}</div>
-
-                                    {/* Row 3 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B05')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B06')}</div>
-
-                                    {/* Row 4 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B07')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B08')}</div>
-
-                                    {/* Row 5 */}
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B12')}</div>
-                                    <div className="col-span-1"></div>
-                                    <div className="col-span-1 flex justify-center">{renderSeatButton('B13')}</div>
-
-                                    {/* Row 6 (Full Width Back) */}
-                                    <div className="col-span-3 grid grid-cols-5 gap-2 mt-4 pt-4 border-t border-dashed border-outline-variant">
-                                        {['B14', 'B15', 'B16', 'B17', 'B18'].map((seat) => (
-                                            <div key={seat} className="col-span-1 h-20 flex justify-center">
-                                                {soldSeats.has(seat) ? (
-                                                    <button disabled className="w-full h-full rounded-xl bg-surface-variant flex flex-col items-center justify-center opacity-70">
-                                                        <span className="font-body-md text-[10px] font-semibold text-on-surface-variant">{seat}</span>
-                                                    </button>
-                                                ) : selectedSeats.includes(seat) ? (
-                                                    <button onClick={() => handleSeatClick(seat)} className="w-full h-full rounded-xl bg-primary text-on-primary flex flex-col items-center justify-center cursor-pointer font-bold text-[10px] ring-2 ring-primary ring-offset-2 ring-offset-surface">
-                                                        {seat}
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => handleSeatClick(seat)} className="w-full h-full rounded-xl border-2 border-outline-variant bg-surface-container-lowest flex flex-col items-center justify-center cursor-pointer text-on-surface font-semibold text-[10px] hover:border-primary">
-                                                        {seat}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
+                    ) : seatMap.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-4">
+                            <span className="material-symbols-outlined text-5xl text-outline">event_seat</span>
+                            <p className="text-on-surface-variant">Chưa có sơ đồ ghế cho chuyến này</p>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="relative border-4 border-outline-variant rounded-[40px] rounded-t-[80px] p-8 w-full max-w-sm mx-auto bg-surface">
+                            {/* Steering wheel */}
+                            <div className="flex justify-start mb-8 opacity-50">
+                                <span className="material-symbols-outlined text-on-surface-variant text-2xl">radio_button_unchecked</span>
+                            </div>
 
-                    {/* Deck selections */}
-                    <div className="mt-8 flex gap-4">
-                        <button 
-                            onClick={() => setActiveDeck('lower')}
-                            className={`px-6 py-2 border rounded-lg font-semibold text-sm transition-all cursor-pointer ${
-                                activeDeck === 'lower' 
-                                    ? 'border-outline text-on-surface bg-surface-container-high shadow-inner' 
-                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'
-                            }`}
-                        >
-                            Tầng Dưới
-                        </button>
-                        <button 
-                            onClick={() => setActiveDeck('upper')}
-                            className={`px-6 py-2 border rounded-lg font-semibold text-sm transition-all cursor-pointer ${
-                                activeDeck === 'upper' 
-                                    ? 'border-outline text-on-surface bg-surface-container-high shadow-inner' 
-                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'
-                            }`}
-                        >
-                            Tầng Trên
-                        </button>
-                    </div>
+                            {hasSeatPositionInfo
+                                ? renderSmartLayout(currentDeckSeats)
+                                : renderFallbackLayout(currentDeckSeats)
+                            }
+                        </div>
+                    )}
+
+                    {/* Deck toggle */}
+                    {hasMultipleDecks && (
+                        <div className="mt-8 flex gap-4">
+                            <button 
+                                onClick={() => setActiveDeck('lower')}
+                                className={`px-6 py-2 border rounded-lg font-semibold text-sm transition-all cursor-pointer ${
+                                    activeDeck === 'lower' 
+                                        ? 'border-outline text-on-surface bg-surface-container-high shadow-inner' 
+                                        : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'
+                                }`}
+                            >
+                                Tầng Dưới ({lowerDeckSeats.length} ghế)
+                            </button>
+                            <button 
+                                onClick={() => setActiveDeck('upper')}
+                                className={`px-6 py-2 border rounded-lg font-semibold text-sm transition-all cursor-pointer ${
+                                    activeDeck === 'upper' 
+                                        ? 'border-outline text-on-surface bg-surface-container-high shadow-inner' 
+                                        : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'
+                                }`}
+                            >
+                                Tầng Trên ({upperDeckSeats.length} ghế)
+                            </button>
+                        </div>
+                    )}
                 </section>
             </main>
 
@@ -380,13 +461,14 @@ export const SeatSelectionPage: React.FC = () => {
                             {selectedSeats.length > 0 && ` (${selectedSeats.join(', ')})`}
                         </p>
                         <p className="text-2xl font-bold text-primary mt-1" style={{ fontFamily: 'Playfair Display, serif' }}>
-                            Tổng: {(currentTrip.price * selectedSeats.length).toLocaleString()}₫
+                            Tổng: {(price * selectedSeats.length).toLocaleString()}₫
                         </p>
                     </div>
                     
                     <button 
                         onClick={handleContinue}
-                        className="w-full md:w-auto bg-primary text-on-primary font-semibold text-base py-4 px-12 rounded-xl hover:bg-[#c84d04] shadow-[0_4px_12px_rgba(161,59,0,0.3)] hover:shadow-[0_6px_18px_rgba(161,59,0,0.4)] active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer border-none uppercase tracking-wider"
+                        disabled={selectedSeats.length === 0}
+                        className="w-full md:w-auto bg-primary text-on-primary font-semibold text-base py-4 px-12 rounded-xl hover:bg-[#c84d04] shadow-[0_4px_12px_rgba(161,59,0,0.3)] hover:shadow-[0_6px_18px_rgba(161,59,0,0.4)] active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer border-none uppercase tracking-wider disabled:bg-surface-container-highest disabled:text-outline disabled:cursor-not-allowed"
                     >
                         <span>Tiếp tục</span>
                         <span className="material-symbols-outlined text-[20px]">arrow_forward</span>

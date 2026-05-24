@@ -61,3 +61,47 @@ export interface UpdateDriverRequest {
 export interface UpdateDriverStatusRequest {
   status: DriverStatus;
 }
+
+// ─── Schedule & Availability ────────────────────────────────────────────────
+export type AvailabilityType = 'AVAILABLE' | 'TRAINING' | 'BLOCKED' | 'SICK_LEAVE' | 'DAY_OFF';
+
+export interface DriverAvailabilityResponse {
+  id: string;
+  driverId: string;
+  date: string;
+  type: AvailabilityType;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailabilityEntry {
+  date: string;
+  type: AvailabilityType;
+  note?: string;
+}
+
+export interface UpdateDriverAvailabilityRequest {
+  entries: AvailabilityEntry[];
+}
+
+// ─── External Aggregation (Schedule & Reviews) ──────────────────────────────
+export interface DriverScheduleResponse {
+  id: string; // tripId
+  routeId: string;
+  vehicleId: string;
+  departureDatetime: string;
+  arrivalDatetime: string;
+  status: string;
+  routeName?: string; // aggregated
+}
+
+export interface DriverReviewResponse {
+  id: string;
+  driverId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  userName?: string;
+}

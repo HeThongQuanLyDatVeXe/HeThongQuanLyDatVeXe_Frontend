@@ -1,6 +1,6 @@
 import { axiosInstance } from '../../configurations/axios';
 import type { ApiResponse } from '../../types/user-service/response/ApiResponse';
-import type { CityResponse, RouteResponse, PointResponse, RouteStopPointResponse, RoutePage } from '../../types/route-service/response';
+import type { CityResponse, RouteResponse, PointResponse, RouteStopPointResponse, RoutePage, PageResponse } from '../../types/route-service/response';
 
 // Assuming gateway maps /api/v1/route to Route Service
 // Note: Depends on backend implementation. We use standard paths here.
@@ -45,16 +45,16 @@ export const routeService = {
   },
 
   // ─── Điểm đón / Điểm trả (Public) ──────────────────────────────────────────
-  getPickupPoints() {
-    return axiosInstance.get<ApiResponse<PointResponse[]>>(PICKUP_BASE);
+  getPickupPoints(params?: { page?: number; size?: number }) {
+    return axiosInstance.get<ApiResponse<PageResponse<PointResponse> | PointResponse[]>>(PICKUP_BASE, { params });
   },
 
   getPickupPointsByCity(cityId: string) {
     return axiosInstance.get<ApiResponse<PointResponse[]>>(`${PICKUP_BASE}/city/${cityId}`);
   },
 
-  getDropoffPoints() {
-    return axiosInstance.get<ApiResponse<PointResponse[]>>(DROPOFF_BASE);
+  getDropoffPoints(params?: { page?: number; size?: number }) {
+    return axiosInstance.get<ApiResponse<PageResponse<PointResponse> | PointResponse[]>>(DROPOFF_BASE, { params });
   },
 
   getDropoffPointsByCity(cityId: string) {

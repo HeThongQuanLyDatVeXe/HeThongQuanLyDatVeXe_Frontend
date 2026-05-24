@@ -6,10 +6,17 @@ import type {
   CreateTripRequest, 
   UpdateTripRequest, 
   UpdateTripStatusRequest, 
-  AdminTripFilterRequest 
+  AdminTripFilterRequest,
+  TripCrewResponse,
+  AssignCrewRequest,
+  TripTemplateResponse,
+  CreateTripTemplateRequest,
+  UpdateTripTemplateRequest,
+  GenerateTripsRequest
 } from '../../types/trip-service/Trip';
 
 const TRIP_BASE = '/trip/admin/trips';
+const TEMPLATE_BASE = '/trip/admin/trip-templates';
 
 export const adminTripService = {
   getAllTrips(params?: AdminTripFilterRequest) {
@@ -30,5 +37,50 @@ export const adminTripService = {
 
   updateTripStatus(id: string, data: UpdateTripStatusRequest) {
     return axiosInstance.put<ApiResponse<TripResponse>>(`${TRIP_BASE}/${id}/status`, data);
+  },
+
+  getTripById(id: string) {
+    return axiosInstance.get<ApiResponse<TripResponse>>(`/trip/trips/${id}`);
+  },
+
+  cancelTrip(id: string, data?: { reason?: string }) {
+    return axiosInstance.put<ApiResponse<TripResponse>>(`${TRIP_BASE}/${id}/cancel`, data);
+  },
+
+  getTripBookings(id: string) {
+    return axiosInstance.get<ApiResponse<any[]>>(`${TRIP_BASE}/${id}/bookings`);
+  },
+
+  assignDriver(id: string, data: AssignCrewRequest) {
+    return axiosInstance.put<ApiResponse<TripCrewResponse>>(`${TRIP_BASE}/${id}/assign-driver`, data);
+  },
+
+  assignStaff(id: string, data: AssignCrewRequest) {
+    return axiosInstance.put<ApiResponse<TripCrewResponse>>(`${TRIP_BASE}/${id}/assign-staff`, data);
+  },
+
+  getTripCrew(id: string) {
+    return axiosInstance.get<ApiResponse<TripCrewResponse[]>>(`${TRIP_BASE}/${id}/crew`);
+  },
+
+  // ─── Trip Templates ─────────────────────────────────────────────────────────
+  getAllTripTemplates(params?: { page?: number; size?: number; routeId?: string }) {
+    return axiosInstance.get<ApiResponse<PageResponse<TripTemplateResponse>>>(`${TEMPLATE_BASE}`, { params });
+  },
+
+  createTripTemplate(data: CreateTripTemplateRequest) {
+    return axiosInstance.post<ApiResponse<TripTemplateResponse>>(`${TEMPLATE_BASE}`, data);
+  },
+
+  updateTripTemplate(id: string, data: UpdateTripTemplateRequest) {
+    return axiosInstance.put<ApiResponse<TripTemplateResponse>>(`${TEMPLATE_BASE}/${id}`, data);
+  },
+
+  deleteTripTemplate(id: string) {
+    return axiosInstance.delete<ApiResponse<void>>(`${TEMPLATE_BASE}/${id}`);
+  },
+
+  generateTripsFromTemplate(id: string, data: GenerateTripsRequest) {
+    return axiosInstance.post<ApiResponse<TripResponse[]>>(`${TEMPLATE_BASE}/${id}/generate-trips`, data);
   }
 };

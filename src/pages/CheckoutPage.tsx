@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/layouts/Header';
 import { Footer } from '../components/layouts/Footer';
+import { ROUTES } from '../constants/routes';
 
 interface CheckoutState {
     selectedSeats: string[];
@@ -17,18 +18,23 @@ export const CheckoutPage: React.FC = () => {
     // Recover details from route state
     const passedState = location.state as CheckoutState | null;
 
-    const currentTrip = passedState?.currentTrip || {
-        id: id || 'default',
-        from: 'Sài Gòn',
-        to: 'Đà Lạt',
-        duration: '7 tiếng di chuyển',
-        price: 420000,
-        operator: 'Phương Trang',
-        vehicleType: 'Giường nằm VIP 34 chỗ'
-    };
+    if (!passedState?.currentTrip || !passedState?.selectedSeats?.length) {
+        // No valid state: redirect back
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+                <span className="material-symbols-outlined text-6xl text-outline">error_outline</span>
+                <h2 className="text-xl font-bold text-on-surface">Không có thông tin đặt vé</h2>
+                <p className="text-on-surface-variant">Vui lòng quay lại chọn chuyến và ghế trước.</p>
+                <button onClick={() => navigate(ROUTES.ROUTES)} className="mt-4 px-6 py-2 bg-primary text-on-primary rounded-xl cursor-pointer">
+                    Quay lại tuyến đường
+                </button>
+            </div>
+        );
+    }
 
-    const selectedSeats = passedState?.selectedSeats || ['A12', 'A13'];
-    const baseTotal = passedState?.totalAmount || (currentTrip.price * selectedSeats.length);
+    const currentTrip = passedState.currentTrip;
+    const selectedSeats = passedState.selectedSeats;
+    const baseTotal = passedState.totalAmount || (currentTrip.price * selectedSeats.length);
 
     // Form inputs state
     const [fullName, setFullName] = useState('');
@@ -297,12 +303,14 @@ export const CheckoutPage: React.FC = () => {
                                         <span className="material-symbols-outlined text-outline text-[18px]">arrow_right_alt</span>
                                         <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.to}</span>
                                     </div>
-                                    <div className="text-base font-semibold text-on-surface">{currentTrip.operator} • {currentTrip.vehicleType}</div>
+                                    <div className="text-base font-semibold text-on-surface">{currentTrip.vehicleType}</div>
                                     
-                                    <div className="text-sm text-on-surface-variant mt-2 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[16px]">schedule</span>
-                                        <span>22:30, T6, 24 Thg 11, 2026</span>
-                                    </div>
+                                    {currentTrip.departureDatetime && (
+                                        <div className="text-sm text-on-surface-variant mt-2 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                            <span>{new Date(currentTrip.departureDatetime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                        </div>
+                                    )}
                                     
                                     <div className="text-sm text-on-surface-variant mt-1.5 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[16px]">chair</span>

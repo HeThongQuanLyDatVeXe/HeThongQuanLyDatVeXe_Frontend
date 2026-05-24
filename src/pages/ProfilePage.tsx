@@ -99,6 +99,9 @@ export const ProfilePage: React.FC = () => {
     setInfoMsg(null);
     try {
       const res = await userService.uploadAvatar(file);
+      if (res.data.code && res.data.code !== 1000) {
+        throw new Error(res.data.message || 'Lỗi từ server');
+      }
       setInfoData((p) => ({ ...p, avatarUrl: res.data.result ?? '' }));
       // Cập nhật AuthContext ngay lập tức để Header và các component khác hiển thị ảnh mới
       await refreshUser();

@@ -27,34 +27,49 @@ export interface RouteResponse {
   description?: string;
   createdAt?: string;
   updatedAt?: string;
-
-  // Mock fields that UI expects but backend doesn't provide natively yet
-  basePrice?: number;
-  popular?: boolean;
 }
 
 export interface PointResponse {
   id: string;
+  cityId: string;
+  cityName: string;
   name: string;
   address: string;
-  cityId: string;
   latitude?: number;
   longitude?: number;
-  description?: string;
+  type: 'PICKUP' | 'DROPOFF' | 'BOTH';
+  isActive: boolean;
+  sortOrder: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface RouteStopPointResponse {
   id: string;
-  routeId: string;
-  point: PointResponse;
-  pointType: 'PICKUP' | 'DROPOFF';
-  orderIndex: number;
-  timeOffset: number; // minutes from start
+  stopPointId: string;
+  stopPointName: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  type: 'PICKUP' | 'DROPOFF' | 'BOTH';
+  stopOrder: number;
+  arrivalOffsetMinutes?: number;
+  departureOffsetMinutes?: number;
+  isPickup?: boolean;
+  isDropoff?: boolean;
 }
 
 export interface RoutePage {
   content: RouteResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+export interface PageResponse<T> {
+  content: T[];
   page: number;
   size: number;
   totalElements: number;

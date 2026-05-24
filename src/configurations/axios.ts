@@ -17,6 +17,10 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const userId = window.localStorage.getItem('user_id');
+    if (userId) {
+      config.headers['X-User-Id'] = userId;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -76,7 +80,7 @@ axiosInstance.interceptors.response.use(
 
       // There is a refresh token — attempt to refresh
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
@@ -90,7 +94,7 @@ axiosInstance.interceptors.response.use(
 
       isRefreshing = true;
 
-      return new Promise(function(resolve, reject) {
+      return new Promise(function (resolve, reject) {
         axios.post(`${API_BASE_URL}/api/v1/identity/auth/refresh-token`, { refreshToken })
           .then((res) => {
             const { accessToken, refreshToken: newRefresh } = res.data.result;
