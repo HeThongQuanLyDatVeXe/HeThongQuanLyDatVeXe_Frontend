@@ -76,6 +76,10 @@ export const vehicleService = {
     return axiosInstance.post<ApiResponse<TripSeatOverrideResponse[]>>(`${VEHICLE_BASE}/admin/trips/${tripId}/seat-overrides`, data);
   },
 
+  deleteTripSeatOverride(overrideId: string) {
+    return axiosInstance.delete<ApiResponse<void>>(`${VEHICLE_BASE}/admin/seat-overrides/${overrideId}`);
+  },
+
   // ─── Maintenance ──────────────────────────────────────────────────────────
   getMaintenanceHistory(vehicleId: string) {
     return axiosInstance.get<ApiResponse<MaintenanceLogResponse[]>>(`${VEHICLE_BASE}/admin/vehicles/${vehicleId}/maintenance-history`);

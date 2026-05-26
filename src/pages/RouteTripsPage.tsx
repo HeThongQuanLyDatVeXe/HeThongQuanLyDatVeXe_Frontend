@@ -445,6 +445,7 @@ export const RouteTripsPage: React.FC = () => {
                             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-primary bg-primary" /> Đang chọn</span>
                             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-slate-300 bg-slate-200" /> Đã đặt</span>
                             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-orange-400 bg-orange-50" /> Đang giữ</span>
+                            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-300 bg-red-50" /> Hỏng/Khóa</span>
                           </div>
 
                           {/* Seat Grid */}
@@ -495,11 +496,24 @@ export const RouteTripsPage: React.FC = () => {
                                             const isChosen = selectedSeats.includes(seat.seatNumber);
                                             const isBooked = seat.status === 'BOOKED';
                                             const isHeld = seat.status === 'HELD';
+                                            
+                                            const getSeatTypeName = (type?: string) => {
+                                              if (!type) return '';
+                                              const upper = type.toUpperCase();
+                                              if (upper === 'VIP') return 'VIP';
+                                              if (upper === 'NORMAL' || upper === 'REGULAR') return 'Thường';
+                                              if (upper === 'BED') return 'Giường';
+                                              if (upper === 'DOUBLE_BED') return 'Giường đôi';
+                                              if (upper === 'LIMOUSINE') return 'Limousine';
+                                              return type;
+                                            };
+                                            const seatTypeName = getSeatTypeName(seat.seatType);
+
                                             return (
                                               <button key={seat.seatNumber}
                                                 disabled={!isAvailable && !isChosen}
                                                 onClick={() => (isAvailable || isChosen) ? toggleSeat(seat.seatNumber) : undefined}
-                                                className={`h-10 flex items-center justify-center rounded-lg border-2 text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed ${
+                                                className={`h-14 flex flex-col items-center justify-center rounded-lg border-2 text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed p-1 ${
                                                   isChosen ? 'border-primary bg-primary text-white scale-105 shadow-md' :
                                                   isAvailable ? 'border-green-400 bg-green-50 text-green-700 hover:border-primary hover:bg-primary/10' :
                                                   isBooked ? 'border-slate-300 bg-slate-200 text-slate-400' :
@@ -507,7 +521,8 @@ export const RouteTripsPage: React.FC = () => {
                                                   'border-red-300 bg-red-50 text-red-400'
                                                 }`}
                                                 title={`${seat.seatNumber} (${seat.seatType})`}>
-                                                {seat.seatNumber}
+                                                <span>{seat.seatNumber}</span>
+                                                <span className="text-[9px] font-normal opacity-80 truncate w-full text-center mt-0.5">{seatTypeName}</span>
                                               </button>
                                             );
                                           })
@@ -545,10 +560,33 @@ export const RouteTripsPage: React.FC = () => {
                                   <p className="typo-headline-md text-primary font-bold">{fmtPrice(calculateTotal())}</p>
                                 </div>
                                 <button
-                                  className="px-6 py-3 bg-primary text-on-primary rounded-xl typo-label-caps font-bold hover:bg-primary-hover transition-colors shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
-                                  disabled
-                                  title="Chờ Booking Service hoàn thành">
-                                  Đặt vé (Sắp ra mắt)
+                                  className="px-6 py-3 bg-primary text-on-primary rounded-xl typo-label-caps font-bold hover:bg-primary-hover transition-colors shadow-md active:scale-95 cursor-pointer"
+                                  onClick={() => {
+                                    const seatDetails = selectedSeats.map(sn => {
+                                      const si = seatMap!.seats.find(s => s.seatNumber === sn);
+                                      const st = si?.seatType || 'REGULAR';
+                                      const pe = selectedTrip?.prices?.find(p => p.seatType === st) || selectedTrip?.prices?.[0];
+                                      return { seatNumber: sn, seatType: st, price: pe?.finalPrice || pe?.basePrice || 0 };
+                                    });
+                                    navigate(`/dat-ve/${selectedTripId}`, {
+                                      state: {
+                                        selectedSeats,
+                                        seatDetails,
+                                        trip: {
+                                          id: selectedTrip!.id,
+                                          from: route.originCityName,
+                                          to: route.destinationCityName,
+                                          vehicleType: selectedTrip!.vehicle?.vehicleTypeName || '',
+                                          licensePlate: selectedTrip!.vehicle?.licensePlate || '',
+                                          departureDatetime: selectedTrip!.departureDatetime,
+                                          arrivalDatetime: selectedTrip!.arrivalDatetime,
+                                          tripCode: selectedTrip!.tripCode || '',
+                                        },
+                                        totalAmount: calculateTotal(),
+                                      }
+                                    });
+                                  }}>
+                                  Đặt vé ngay
                                 </button>
                               </div>
                             </div>

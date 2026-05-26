@@ -6,6 +6,7 @@ export const ROUTES = {
   TRIP_DETAIL: '/tuyen-duong/:id',
   SEAT_SELECTION: '/tuyen-duong/:id/chon-ghe',
   CHECKOUT: '/tuyen-duong/:id/thanh-toan',
+  BOOKING: '/dat-ve/:tripId',
   BOOKING_SUCCESSFUL: '/tuyen-duong/:id/dat-cho-thanh-cong',
   LOGIN: '/login',
   REGISTER: '/register',

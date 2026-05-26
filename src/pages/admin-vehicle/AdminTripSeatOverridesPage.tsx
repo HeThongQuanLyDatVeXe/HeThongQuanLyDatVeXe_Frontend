@@ -110,6 +110,17 @@ export const AdminTripSeatOverridesPage: React.FC = () => {
         }
     };
 
+    const handleDelete = async (overrideId: string) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa override này không?")) return;
+        try {
+            await vehicleService.deleteTripSeatOverride(overrideId);
+            success('Đã xóa override thành công');
+            fetchOverrides();
+        } catch (err: any) {
+            showError('Không thể xóa override');
+        }
+    };
+
     return (
         <AdminLayout>
             <div className="space-y-6 text-slate-800">
@@ -133,13 +144,14 @@ export const AdminTripSeatOverridesPage: React.FC = () => {
                                 <th className="px-6 py-4 font-semibold">Ghế</th>
                                 <th className="px-6 py-4 font-semibold">Khóa</th>
                                 <th className="px-6 py-4 font-semibold">Lý do</th>
+                                <th className="px-6 py-4 font-semibold text-right">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-500">Đang tải...</td></tr>
+                                <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-500">Đang tải...</td></tr>
                             ) : overrides.length === 0 ? (
-                                <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-500">Chưa có dữ liệu override.</td></tr>
+                                <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-500">Chưa có dữ liệu override.</td></tr>
                             ) : overrides.map((override) => (
                                 <tr key={override.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4 font-medium">{override.seatNumber}</td>
@@ -149,6 +161,11 @@ export const AdminTripSeatOverridesPage: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">{override.reason}</td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleDelete(override.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Xóa override">
+                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

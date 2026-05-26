@@ -155,19 +155,30 @@ export const SeatSelectionPage: React.FC = () => {
         return Object.entries(rows).sort(([a], [b]) => Number(a) - Number(b));
     };
 
+    const getSeatTypeName = (type?: string) => {
+        if (!type) return '';
+        const upper = type.toUpperCase();
+        if (upper === 'VIP') return 'VIP';
+        if (upper === 'NORMAL') return 'Thường';
+        if (upper === 'BED') return 'Giường';
+        return type;
+    };
+
     const renderSeatButton = (seat: SeatInfo) => {
         const seatCode = seat.seatNumber;
         const isSold = soldSeats.has(seatCode);
         const isSelected = selectedSeats.includes(seatCode);
+        const seatTypeDisplay = getSeatTypeName(seat.seatType);
 
         if (isSold) {
             return (
                 <button
                     disabled
-                    className="w-16 h-20 rounded-xl bg-surface-variant flex flex-col items-center justify-center cursor-not-allowed opacity-70 border border-transparent"
+                    className="w-16 h-20 rounded-xl bg-surface-variant flex flex-col items-center justify-center cursor-not-allowed opacity-70 border border-transparent p-1"
                 >
                     <span className="material-symbols-outlined text-on-surface-variant text-sm mb-1">bed</span>
                     <span className="font-body-md text-xs font-semibold text-on-surface-variant">{seatCode}</span>
+                    <span className="text-[9px] text-on-surface-variant truncate w-full text-center">{seatTypeDisplay}</span>
                 </button>
             );
         }
@@ -176,10 +187,11 @@ export const SeatSelectionPage: React.FC = () => {
             return (
                 <button
                     onClick={() => handleSeatClick(seatCode)}
-                    className="w-16 h-20 rounded-xl bg-primary shadow-[0_4px_12px_rgba(161,59,0,0.3)] transition-all flex flex-col items-center justify-center ring-2 ring-primary ring-offset-2 ring-offset-surface cursor-pointer"
+                    className="w-16 h-20 rounded-xl bg-primary shadow-[0_4px_12px_rgba(161,59,0,0.3)] transition-all flex flex-col items-center justify-center ring-2 ring-primary ring-offset-2 ring-offset-surface cursor-pointer p-1"
                 >
                     <span className="material-symbols-outlined text-on-primary text-sm mb-1">bed</span>
                     <span className="font-body-md text-xs font-bold text-on-primary">{seatCode}</span>
+                    <span className="text-[9px] text-primary-container font-medium truncate w-full text-center">{seatTypeDisplay}</span>
                 </button>
             );
         }
@@ -187,10 +199,11 @@ export const SeatSelectionPage: React.FC = () => {
         return (
             <button
                 onClick={() => handleSeatClick(seatCode)}
-                className="w-16 h-20 rounded-xl border-2 border-outline-variant bg-surface-container-lowest hover:border-primary hover:shadow-[0_4px_12px_rgba(161,59,0,0.2)] transition-all flex flex-col items-center justify-center cursor-pointer"
+                className="w-16 h-20 rounded-xl border-2 border-outline-variant bg-surface-container-lowest hover:border-primary hover:shadow-[0_4px_12px_rgba(161,59,0,0.2)] transition-all flex flex-col items-center justify-center cursor-pointer p-1"
             >
                 <span className="material-symbols-outlined text-outline text-sm mb-1">bed</span>
                 <span className="font-body-md text-xs font-semibold text-on-surface">{seatCode}</span>
+                <span className="text-[9px] text-on-surface-variant truncate w-full text-center">{seatTypeDisplay}</span>
             </button>
         );
     };

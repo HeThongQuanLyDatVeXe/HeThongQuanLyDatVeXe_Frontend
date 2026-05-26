@@ -34,6 +34,7 @@ import { SeatSelectionPage } from '../pages/SeatSelectionPage';
 import { CheckoutPage } from '../pages/CheckoutPage';
 import { BookingSuccessfulPage } from '../pages/BookingSuccessfulPage';
 import { MyBookingsPage } from '../pages/MyBookingsPage';
+import { BookingPage } from '../pages/BookingPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
@@ -92,6 +93,7 @@ export const AppRouter: React.FC = () => {
                 <Route path={ROUTES.TRIP_DETAIL} element={<TripDetailPage />} />
                 <Route path={ROUTES.SEAT_SELECTION} element={<SeatSelectionPage />} />
                 <Route path={ROUTES.CHECKOUT} element={<CheckoutPage />} />
+                <Route path={ROUTES.BOOKING} element={<BookingPage />} />
                 <Route path={ROUTES.BOOKING_SUCCESSFUL} element={<BookingSuccessfulPage />} />
 
                 <Route
