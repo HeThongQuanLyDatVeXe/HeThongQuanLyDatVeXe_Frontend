@@ -1,221 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/user-service/authService';
-import { ROUTES } from '../constants/routes';
-import { getApiErrorCode } from '../utils/errorUtils';
-import { useToast } from '../contexts/ToastContext';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import loginBgImage from '../assets/login1.jpg';
+import { useRegisterPage } from '../hooks/pages/useRegisterPage';
 
-type Step = 'form' | 'otp';
-
-interface FloatingInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  error?: string;
-  isPassword?: boolean;
-  showPassword?: boolean;
-  onTogglePassword?: () => void;
-}
-
-const FloatingInput: React.FC<FloatingInputProps> = ({
-  label,
-  error,
-  className = '',
-  id,
-  isPassword,
-  showPassword,
-  onTogglePassword,
-  ...props
-}) => {
-  return (
-    <div className="flex flex-col gap-1 w-full">
-      <div className="floating-label-group relative">
-        <input
-          id={id}
-          type={isPassword ? (showPassword ? 'text' : 'password') : props.type}
-          className={`
-            w-full h-[48px] bg-transparent border rounded-lg px-4 py-3 
-            transition-all duration-200 outline-none fancy-input
-            ${isPassword ? 'pr-12' : ''}
-            ${error ? 'border-red-500 focus:border-red-500' : 'border-outline-variant/60 focus:border-primary-hover'}
-            ${className}
-          `}
-          placeholder=" "
-          {...props}
-        />
-        <label 
-          htmlFor={id}
-          className={`
-            text-sm absolute left-4 top-3 transition-all duration-200 pointer-events-none
-            ${error ? 'text-red-500' : 'text-on-surface-variant/80'}
-          `}
-        >
-          {label}
-        </label>
-        {isPassword && onTogglePassword && (
-          <button
-            type="button"
-            onClick={onTogglePassword}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary-hover focus:outline-none select-none flex items-center justify-center cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {showPassword ? 'visibility_off' : 'visibility'}
-            </span>
-          </button>
-        )}
-      </div>
-      {error && <span className="text-[11px] text-red-500 font-medium px-2">{error}</span>}
-    </div>
-  );
-};
+import { FloatingInput } from '../components/common/FloatingInput';
 
 export const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { success, error: showError, warning } = useToast();
-  const [step, setStep] = useState<Step>('form');
-
-  // Form state
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
-    phoneNumber: '',
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [formLoading, setFormLoading] = useState(false);
-
-  // OTP state
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  // Password visibility
-  const [showPw, setShowPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
-
-  const handleFormChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((p) => ({ ...p, [field]: e.target.value }));
-    setFormErrors((p) => ({ ...p, [field]: '' }));
-  };
-
-  const getPasswordStrength = (pw: string) => {
-    if (pw.length === 0) return 0;
-    if (pw.length < 8) return 1; // Weak
-    const hasVariety = /[A-Z]/.test(pw) && /[0-9]/.test(pw);
-    if (pw.length >= 8 && hasVariety) return 3; // Strong
-    return 2; // Medium
-  };
-
-  const strength = getPasswordStrength(formData.password);
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.fullName.trim()) errors.fullName = 'Vui lòng nhập họ tên';
-    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.email = 'Email không hợp lệ';
-    if (formData.password.length < 8) errors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
-    if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Mật khẩu không khớp';
-    if (formData.phoneNumber && !formData.phoneNumber.match(/(84|0[3|5|7|8|9])+([0-9]{8})\b/)) {
-      errors.phoneNumber = 'Số điện thoại không hợp lệ (gồm 10 số, bắt đầu bằng 0)';
-    }
-    return errors;
-  };
-
-  const handleSubmitForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      warning('Vui lòng kiểm tra lại thông tin nhập vào');
-      return;
-    }
-    setFormLoading(true);
-    try {
-      await authService.register({
-        email: formData.email,
-        password: formData.password,
-        fullName: formData.fullName,
-        phoneNumber: formData.phoneNumber || undefined,
-      });
-      setStep('otp');
-      startResendCooldown();
-      success('Đăng ký thành công! Vui lòng kiểm tra email để lấy mã OTP.');
-    } catch (err: unknown) {
-      const code = getApiErrorCode(err);
-      if (code === 1002) showError('Email này đã được sử dụng.');
-      else if (code === 1003) showError('Số điện thoại này đã được sử dụng.');
-      else if (code === 1004) showError('Mật khẩu không hợp lệ.');
-      else if (code === 1008) showError('Định dạng email không hợp lệ.');
-      else if (code === 1009) showError('Định dạng số điện thoại không hợp lệ.');
-      else showError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const startResendCooldown = () => {
-    setResendCooldown(60);
-  };
-
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const interval = setInterval(() => {
-      setResendCooldown((p) => p - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [resendCooldown]);
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
-    }
-  };
-
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otp.join('');
-    if (code.length !== 6) {
-      setOtpError('Vui lòng nhập đủ 6 chữ số');
-      return;
-    }
-    setOtpLoading(true);
-    setOtpError('');
-    try {
-      await authService.verifyOtp({ email: formData.email, otpCode: code, purpose: 'EMAIL_VERIFY' });
-      success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
-      navigate(ROUTES.LOGIN);
-    } catch (err: unknown) {
-      const code2 = getApiErrorCode(err);
-      if (code2 === 1011) setOtpError('Mã OTP đã hết hạn. Vui lòng gửi lại.');
-      else if (code2 === 1012) setOtpError('Mã OTP không đúng. Vui lòng kiểm tra lại.');
-      else if (code2 === 1013) setOtpError('Đã nhập sai quá nhiều lần. Vui lòng gửi lại mã mới.');
-      else setOtpError('Xác minh thất bại. Vui lòng thử lại.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0) return;
-    try {
-      await authService.resendOtp({ email: formData.email });
-      setOtp(['', '', '', '', '', '']);
-      setOtpError('');
-      startResendCooldown();
-    } catch {
-      setOtpError('Không thể gửi lại. Vui lòng thử lại sau.');
-    }
-  };
+  const {
+    step,
+    setStep,
+    formData,
+    formErrors,
+    formLoading,
+    otp,
+    otpLoading,
+    otpError,
+    setOtpError,
+    resendCooldown,
+    showPw,
+    setShowPw,
+    showConfirmPw,
+    setShowConfirmPw,
+    strength,
+    handleFormChange,
+    handleSubmitForm,
+    handleOtpChange,
+    handleOtpKeyDown,
+    handleVerify,
+    handleResend,
+    handleGoogleLogin,
+    navigate,
+    ROUTES
+  } = useRegisterPage();
 
   return (
     <div className="font-body text-on-background bg-background-light h-screen w-screen overflow-hidden flex">
@@ -409,6 +225,7 @@ export const RegisterPage: React.FC = () => {
                 <div className="grid grid-cols-1 gap-4">
                   <button
                     type="button"
+                    onClick={handleGoogleLogin}
                     className="flex items-center justify-center gap-3 bg-white border border-outline-variant/30 h-[48px] rounded-lg hover:shadow-sm hover:border-outline-variant transition-all active:scale-[0.98] cursor-pointer"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 48 48">

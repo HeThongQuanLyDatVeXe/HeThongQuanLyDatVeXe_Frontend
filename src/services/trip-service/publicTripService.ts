@@ -1,4 +1,5 @@
 import { axiosInstance } from '../../configurations/axios';
+import { apiCache, CacheTTL } from '../../utils/apiCache';
 import type { ApiResponse } from '../../types/user-service/response/ApiResponse';
 import type { PageResponse } from '../../types/user-service/response/PageResponse';
 import type { 
@@ -16,18 +17,42 @@ export const publicTripService = {
   },
 
   getTripById(id: string) {
-    return axiosInstance.get<ApiResponse<TripResponse>>(`${TRIP_PUBLIC_BASE}/${id}`);
+    const cacheKey = `${TRIP_PUBLIC_BASE}/${id}`;
+    const cached = apiCache.get<ApiResponse<TripResponse>>(cacheKey);
+    if (cached) return Promise.resolve({ data: cached } as any);
+
+    return axiosInstance.get<ApiResponse<TripResponse>>(`${TRIP_PUBLIC_BASE}/${id}`).then(res => {
+      apiCache.set(cacheKey, res.data, CacheTTL.SHORT);
+      return res;
+    });
   },
 
   getAvailableSeats(id: string) {
+    // Don't cache — seat availability changes in real-time
     return axiosInstance.get<ApiResponse<AvailableSeatsResponse>>(`${TRIP_PUBLIC_BASE}/${id}/available-seats`);
   },
 
   getSeatMap(id: string) {
-    return axiosInstance.get<ApiResponse<SeatMapResponse>>(`${TRIP_PUBLIC_BASE}/${id}/seat-map`);
+    // Short cache — seat maps can change but not every second
+    const cacheKey = `${TRIP_PUBLIC_BASE}/${id}/seat-map`;
+    const cached = apiCache.get<ApiResponse<SeatMapResponse>>(cacheKey);
+    if (cached) return Promise.resolve({ data: cached } as any);
+
+    return axiosInstance.get<ApiResponse<SeatMapResponse>>(`${TRIP_PUBLIC_BASE}/${id}/seat-map`).then(res => {
+      apiCache.set(cacheKey, res.data, CacheTTL.SHORT);
+      return res;
+    });
   },
 
   getTripsByRoute(routeId: string, page = 0, size = 10) {
-    return axiosInstance.get<ApiResponse<PageResponse<TripResponse>>>(`${TRIP_PUBLIC_BASE}/route/${routeId}`, { params: { page, size } });
+    const cacheKey = `${TRIP_PUBLIC_BASE}/route/${routeId}`;
+    const params = { page, size };
+    const cached = apiCache.get<ApiResponse<PageResponse<TripResponse>>>(cacheKey, params);
+    if (cached) return Promise.resolve({ data: cached } as any);
+
+    return axiosInstance.get<ApiResponse<PageResponse<TripResponse>>>(`${TRIP_PUBLIC_BASE}/route/${routeId}`, { params }).then(res => {
+      apiCache.set(cacheKey, res.data, CacheTTL.SHORT, params);
+      return res;
+    });
   }
 };

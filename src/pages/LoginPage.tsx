@@ -1,121 +1,27 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/user-service/useAuth';
-import { ROUTES } from '../constants/routes';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useLoginPage } from '../hooks/pages/useLoginPage';
 import { Alert } from '../components/common/Alert';
-import { ENV } from '../configurations/env';
-import { getApiErrorCode } from '../utils/errorUtils';
 import loginBgImage from '../assets/login1.jpg';
 
-interface FloatingInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  error?: string;
-  isPassword?: boolean;
-  showPassword?: boolean;
-  onTogglePassword?: () => void;
-}
-
-const FloatingInput: React.FC<FloatingInputProps> = ({
-  label,
-  error,
-  className = '',
-  id,
-  isPassword,
-  showPassword,
-  onTogglePassword,
-  ...props
-}) => {
-  return (
-    <div className="flex flex-col gap-1 w-full">
-      <div className="floating-label-group relative">
-        <input
-          id={id}
-          type={isPassword ? (showPassword ? 'text' : 'password') : props.type}
-          className={`
-            w-full h-[48px] bg-transparent border rounded-lg px-4 py-3 
-            transition-all duration-200 outline-none fancy-input
-            ${isPassword ? 'pr-12' : ''}
-            ${error ? 'border-red-500 focus:border-red-500' : 'border-outline-variant/60 focus:border-primary-hover'}
-            ${className}
-          `}
-          placeholder=" "
-          {...props}
-        />
-        <label 
-          htmlFor={id}
-          className={`
-            text-sm absolute left-4 top-3 transition-all duration-200 pointer-events-none
-            ${error ? 'text-red-500' : 'text-on-surface-variant/80'}
-          `}
-        >
-          {label}
-        </label>
-        {isPassword && onTogglePassword && (
-          <button
-            type="button"
-            onClick={onTogglePassword}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary-hover focus:outline-none select-none flex items-center justify-center cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {showPassword ? 'visibility_off' : 'visibility'}
-            </span>
-          </button>
-        )}
-      </div>
-      {error && <span className="text-[11px] text-red-500 font-medium px-2">{error}</span>}
-    </div>
-  );
-};
-
+import { FloatingInput } from '../components/common/FloatingInput';
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-
-  const handleGoogleLogin = () => {
-    if (!ENV.GOOGLE_CLIENT_ID) {
-      setError('Thiếu cấu hình Google OAuth. Vui lòng kiểm tra file .env.');
-      return;
-    }
-
-    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    authUrl.searchParams.set('client_id', ENV.GOOGLE_CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', ENV.GOOGLE_REDIRECT_URI);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', ENV.GOOGLE_SCOPE);
-    authUrl.searchParams.set('access_type', 'offline');
-    authUrl.searchParams.set('prompt', 'consent');
-
-    window.location.href = authUrl.toString();
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await login(email, password);
-      // Optional: Save rememberMe state in localStorage if backend/cookies require it.
-      if (rememberMe) {
-        localStorage.setItem('remember_me', 'true');
-      } else {
-        localStorage.removeItem('remember_me');
-      }
-      navigate(ROUTES.PROFILE);
-    } catch (err: unknown) {
-      const code = getApiErrorCode(err);
-      if (code === 1006) setError('Email chưa được xác minh. Vui lòng kiểm tra hộp thư.');
-      else if (code === 1007) setError('Tài khoản đã bị khóa.');
-      else setError('Email hoặc mật khẩu không đúng.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    ROUTES,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    loading,
+    showPw,
+    setShowPw,
+    rememberMe,
+    setRememberMe,
+    handleGoogleLogin,
+    handleSubmit,
+    handleNavigateRegister
+  } = useLoginPage();
 
   return (
     <div className="font-body text-on-background bg-background-light h-screen w-screen overflow-hidden flex">
@@ -177,7 +83,7 @@ export const LoginPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => navigate(ROUTES.REGISTER)}
+              onClick={handleNavigateRegister}
               className="relative z-10 px-8 py-2.5 text-sm font-semibold transition-colors duration-300 text-on-surface-variant hover:text-primary-hover"
             >
               Đăng ký
