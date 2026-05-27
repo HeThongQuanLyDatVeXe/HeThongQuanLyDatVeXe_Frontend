@@ -8,6 +8,16 @@ import type { CreateBasePriceRequest, CreatePricingRuleRequest, CreateSurchargeR
 import type { RouteResponse } from '../../../types/route-service/response';
 import type { VehicleTypeResponse } from '../../../types/vehicle-service/Vehicle';
 
+// In-memory cache for pricing lists
+const pricingCache = {
+  basePrices: null as any[] | null,
+  rules: null as any[] | null,
+  surcharges: null as any[] | null,
+  seasonal: null as any[] | null,
+  routes: null as RouteResponse[] | null,
+  vehicleTypes: null as VehicleTypeResponse[] | null,
+};
+
 export const useAdminPricesPage = () => {
   const { success, error: showError } = useToast();
   const [activeTab, setActiveTab] = useState<'base' | 'rules' | 'surcharges' | 'seasonal'>('base');
@@ -53,14 +63,14 @@ export const useAdminPricesPage = () => {
   });
 
   // Data lists
-  const [basePrices, setBasePrices] = useState<any[]>([]);
-  const [rules, setRules] = useState<any[]>([]);
-  const [surcharges, setSurcharges] = useState<any[]>([]);
-  const [seasonal, setSeasonal] = useState<any[]>([]);
+  const [basePrices, setBasePrices] = useState<any[]>(pricingCache.basePrices || []);
+  const [rules, setRules] = useState<any[]>(pricingCache.rules || []);
+  const [surcharges, setSurcharges] = useState<any[]>(pricingCache.surcharges || []);
+  const [seasonal, setSeasonal] = useState<any[]>(pricingCache.seasonal || []);
 
   // Aggregation lists
-  const [routes, setRoutes] = useState<RouteResponse[]>([]);
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeResponse[]>([]);
+  const [routes, setRoutes] = useState<RouteResponse[]>(pricingCache.routes || []);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeResponse[]>(pricingCache.vehicleTypes || []);
 
   useEffect(() => {
     fetchMetadata();
@@ -74,6 +84,7 @@ export const useAdminPricesPage = () => {
   }, [activeTab]);
 
   const fetchMetadata = async () => {
+    if (pricingCache.routes && pricingCache.vehicleTypes) return;
     try {
       const [routeRes, vehicleTypeRes] = await Promise.all([
         routeService.getRoutes({ size: 200 }),
@@ -82,9 +93,11 @@ export const useAdminPricesPage = () => {
 
       const fetchedRoutes = routeRes.data.result?.content || routeRes.data.data?.content || [];
       setRoutes(fetchedRoutes);
+      pricingCache.routes = fetchedRoutes;
 
       const fetchedVtypes = vehicleTypeRes.data.result?.content || vehicleTypeRes.data.data?.content || [];
       setVehicleTypes(fetchedVtypes);
+      pricingCache.vehicleTypes = fetchedVtypes;
     } catch (error) {
       console.error("Failed to load metadata", error);
     }
@@ -99,41 +112,65 @@ export const useAdminPricesPage = () => {
     return errs.length > 0 ? errs : ['Có lỗi xảy ra'];
   };
 
-  const fetchBasePrices = async () => {
+  const fetchBasePrices = async (force = false) => {
+    if (!force && pricingCache.basePrices) {
+      setBasePrices(pricingCache.basePrices);
+      return;
+    }
     setLoading(true);
     try {
       const res = await adminPriceService.getAllBasePrices();
-      setBasePrices(res.data.result || res.data.data || []);
+      const data = res.data.result || res.data.data || [];
+      setBasePrices(data);
+      pricingCache.basePrices = data;
     } catch (err) {
       console.error('Failed to fetch base prices');
     } finally { setLoading(false); }
   };
 
-  const fetchRules = async () => {
+  const fetchRules = async (force = false) => {
+    if (!force && pricingCache.rules) {
+      setRules(pricingCache.rules);
+      return;
+    }
     setLoading(true);
     try {
       const res = await adminPriceService.getAllPricingRules();
-      setRules(res.data.result || res.data.data || []);
+      const data = res.data.result || res.data.data || [];
+      setRules(data);
+      pricingCache.rules = data;
     } catch (err) {
       console.error('Failed to fetch rules');
     } finally { setLoading(false); }
   };
 
-  const fetchSurcharges = async () => {
+  const fetchSurcharges = async (force = false) => {
+    if (!force && pricingCache.surcharges) {
+      setSurcharges(pricingCache.surcharges);
+      return;
+    }
     setLoading(true);
     try {
       const res = await adminPriceService.getAllSurcharges();
-      setSurcharges(res.data.result || res.data.data || []);
+      const data = res.data.result || res.data.data || [];
+      setSurcharges(data);
+      pricingCache.surcharges = data;
     } catch (err) {
       console.error('Failed to fetch surcharges');
     } finally { setLoading(false); }
   };
 
-  const fetchSeasonal = async () => {
+  const fetchSeasonal = async (force = false) => {
+    if (!force && pricingCache.seasonal) {
+      setSeasonal(pricingCache.seasonal);
+      return;
+    }
     setLoading(true);
     try {
       const res = await adminPriceService.getAllSeasonalPrices();
-      setSeasonal(res.data.result || res.data.data || []);
+      const data = res.data.result || res.data.data || [];
+      setSeasonal(data);
+      pricingCache.seasonal = data;
     } catch (err) {
       console.error('Failed to fetch seasonal prices');
     } finally { setLoading(false); }
@@ -150,7 +187,7 @@ export const useAdminPricesPage = () => {
           price: Number(baseFormData.price)
         });
         success('Thêm giá cơ bản thành công');
-        fetchBasePrices();
+        fetchBasePrices(true);
         setIsAddModalOpen(false);
         setBaseFormData({
           routeId: '', vehicleTypeId: '', seatType: 'REGULAR', price: 0, currency: 'VND', effectiveFrom: ''
@@ -166,7 +203,7 @@ export const useAdminPricesPage = () => {
           priority: ruleFormData.priority ? Number(ruleFormData.priority) : 0
         });
         success('Thêm quy tắc giá thành công');
-        fetchRules();
+        fetchRules(true);
         setIsAddModalOpen(false);
         setRuleFormData({
           name: '', eventType: 'EARLY_BIRD', ruleType: 'PERCENTAGE', value: 0, priority: 0, effectiveFrom: ''
@@ -177,7 +214,7 @@ export const useAdminPricesPage = () => {
           value: Number(surchargeFormData.value)
         });
         success('Thêm phụ phí thành công');
-        fetchSurcharges();
+        fetchSurcharges(true);
         setIsAddModalOpen(false);
         setSurchargeFormData({ name: '', code: '', type: 'FIXED_AMOUNT', value: 0, description: '' });
       } else if (activeTab === 'seasonal') {
@@ -188,7 +225,7 @@ export const useAdminPricesPage = () => {
           vehicleTypeId: seasonalFormData.vehicleTypeId || undefined
         });
         success('Thêm giá theo mùa thành công');
-        fetchSeasonal();
+        fetchSeasonal(true);
         setIsAddModalOpen(false);
         setSeasonalFormData({ name: '', routeId: '', vehicleTypeId: '', type: 'PERCENTAGE', value: 0, startDate: '', endDate: '' });
       } else {
@@ -277,7 +314,7 @@ export const useAdminPricesPage = () => {
           currency: baseFormData.currency
         });
         success('Cập nhật giá cơ bản thành công');
-        fetchBasePrices();
+        fetchBasePrices(true);
         setIsEditModalOpen(false);
       } else if (activeTab === 'rules') {
         await adminPriceService.updatePricingRule(editId, {
@@ -293,7 +330,7 @@ export const useAdminPricesPage = () => {
           priority: ruleFormData.priority ? Number(ruleFormData.priority) : 0
         });
         success('Cập nhật quy tắc giá thành công');
-        fetchRules();
+        fetchRules(true);
         setIsEditModalOpen(false);
       } else if (activeTab === 'surcharges') {
         await adminPriceService.updateSurcharge(editId, {
@@ -303,7 +340,7 @@ export const useAdminPricesPage = () => {
           description: surchargeFormData.description || undefined
         });
         success('Cập nhật phụ phí thành công');
-        fetchSurcharges();
+        fetchSurcharges(true);
         setIsEditModalOpen(false);
       } else if (activeTab === 'seasonal') {
         await adminPriceService.updateSeasonalPrice(editId, {
@@ -313,7 +350,7 @@ export const useAdminPricesPage = () => {
           vehicleTypeId: seasonalFormData.vehicleTypeId || undefined
         });
         success('Cập nhật giá theo mùa thành công');
-        fetchSeasonal();
+        fetchSeasonal(true);
         setIsEditModalOpen(false);
       }
     } catch (err: any) {
@@ -330,7 +367,7 @@ export const useAdminPricesPage = () => {
     try {
       await adminPriceService.deleteBasePrice(id);
       success('Xóa giá cơ bản thành công');
-      fetchBasePrices();
+      fetchBasePrices(true);
     } catch (err: any) {
       showError('Không thể xóa: ' + (extractErrors(err)[0]));
     }
@@ -341,7 +378,7 @@ export const useAdminPricesPage = () => {
     try {
       await adminPriceService.deletePricingRule(id);
       success('Xóa quy tắc giá thành công');
-      fetchRules();
+      fetchRules(true);
     } catch (err: any) {
       showError('Không thể xóa: ' + (extractErrors(err)[0]));
     }
@@ -352,7 +389,7 @@ export const useAdminPricesPage = () => {
     try {
       await adminPriceService.deleteSurcharge(id);
       success('Xóa phụ phí thành công');
-      fetchSurcharges();
+      fetchSurcharges(true);
     } catch (err: any) {
       showError('Không thể xóa: ' + (extractErrors(err)[0]));
     }
@@ -363,7 +400,7 @@ export const useAdminPricesPage = () => {
     try {
       await adminPriceService.deleteSeasonalPrice(id);
       success('Xóa giá theo mùa thành công');
-      fetchSeasonal();
+      fetchSeasonal(true);
     } catch (err: any) {
       showError('Không thể xóa: ' + (extractErrors(err)[0]));
     }

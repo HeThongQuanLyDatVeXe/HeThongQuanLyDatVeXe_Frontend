@@ -86,7 +86,9 @@ export const useRouteTripsPage = () => {
         // Price service may not be available
       }
 
-      setTrips(bookable);
+      // Filter out trips that STILL have no prices
+      const bookableWithPrices = bookable.filter(t => t.prices && t.prices.length > 0);
+      setTrips(bookableWithPrices);
     } catch {
       showError('Không thể tải dữ liệu tuyến đường');
     } finally {

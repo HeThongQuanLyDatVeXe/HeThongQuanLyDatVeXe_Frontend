@@ -14,8 +14,8 @@ export const RouteCard: React.FC<RouteCardProps> = ({ route, stopPoints, onClick
         return h > 0 ? `${h}h${mm > 0 ? mm + 'p' : ''}` : `${mm}p`;
     };
 
-    const pickups = stopPoints.filter(s => s.isPickup || s.type === 'PICKUP' || s.type === 'BOTH');
-    const dropoffs = stopPoints.filter(s => s.isDropoff || s.type === 'DROPOFF' || s.type === 'BOTH');
+    const pickups = stopPoints.filter(s => s.isPickup);
+    const dropoffs = stopPoints.filter(s => s.isDropoff);
 
     return (
         <article 

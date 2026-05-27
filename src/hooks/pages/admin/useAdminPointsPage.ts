@@ -4,6 +4,10 @@ import { adminRouteService } from '../../../services/route-service/adminRouteSer
 import { useToast } from '../../../contexts/ToastContext';
 import type { PointResponse, CityResponse } from '../../../types/route-service/response';
 
+// Simple in-memory cache for points and cities
+const pointsCache = new Map<string, { points: PointResponse[], totalPages: number }>();
+let citiesCache: CityResponse[] | null = null;
+
 export type PointType = 'PICKUP' | 'DROPOFF' | 'BOTH';
 export type TabType = 'PICKUP' | 'DROPOFF';
 
@@ -45,14 +49,28 @@ export const useAdminPointsPage = () => {
   useEffect(() => { fetchPoints(); }, [activeTab, filterCityId, page]);
 
   const fetchCities = async () => {
+    if (citiesCache) {
+      setCities(citiesCache);
+      return;
+    }
     try {
       const res = await routeService.getCities();
       const p = res.data.result || res.data.data;
-      setCities(Array.isArray(p) ? p : (p as any)?.content || []);
+      const data = Array.isArray(p) ? p : (p as any)?.content || [];
+      citiesCache = data;
+      setCities(data);
     } catch { /* silent */ }
   };
 
   const fetchPoints = async () => {
+    const cacheKey = `${activeTab}_${filterCityId}_${page}`;
+    if (pointsCache.has(cacheKey)) {
+      const cached = pointsCache.get(cacheKey)!;
+      setPoints(cached.points);
+      setTotalPages(cached.totalPages);
+      return;
+    }
+
     setLoading(true);
     try {
       let res;
@@ -67,8 +85,12 @@ export const useAdminPointsPage = () => {
       }
       const payload = res.data.result || res.data.data;
       const arr = Array.isArray(payload) ? payload : (payload as any)?.content || [];
+      const total = Array.isArray(payload) ? 1 : (payload as any)?.totalPages || 1;
+      
+      pointsCache.set(cacheKey, { points: arr, totalPages: total });
+      
       setPoints(arr);
-      setTotalPages(Array.isArray(payload) ? 1 : (payload as any)?.totalPages || 1);
+      setTotalPages(total);
     } catch (err: any) {
       showError('Lỗi tải dữ liệu: ' + (err?.response?.data?.message || ''));
       setPoints([]);
@@ -122,6 +144,7 @@ export const useAdminPointsPage = () => {
         else await adminRouteService.createDropoffPoint(payload);
         success('Thêm điểm dừng thành công');
       }
+      pointsCache.clear(); // Invalidate cache on mutation
       setIsModalOpen(false); setEditingPoint(null);
       fetchPoints();
     } catch (err: any) {
@@ -137,6 +160,7 @@ export const useAdminPointsPage = () => {
       if (activeTab === 'PICKUP') await adminRouteService.deletePickupPoint(p.id);
       else await adminRouteService.deleteDropoffPoint(p.id);
       success('Đã xóa điểm dừng');
+      pointsCache.clear(); // Invalidate cache on mutation
       fetchPoints();
     } catch (err: any) { showError(extractErrors(err)[0]); }
   };

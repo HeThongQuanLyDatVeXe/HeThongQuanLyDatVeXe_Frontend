@@ -36,8 +36,8 @@ export const RouteTripsHero: React.FC<RouteTripsHeroProps> = ({ route, stopPoint
                         {stopPoints.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 typo-label-sm text-on-primary/60">
                                 {(() => {
-                                    const pickups = stopPoints.filter(s => s.isPickup || s.type === 'PICKUP' || s.type === 'BOTH');
-                                    const dropoffs = stopPoints.filter(s => s.isDropoff || s.type === 'DROPOFF' || s.type === 'BOTH');
+                                    const pickups = stopPoints.filter(s => s.isPickup);
+                                    const dropoffs = stopPoints.filter(s => s.isDropoff);
                                     return (
                                         <>
                                             {pickups.length > 0 && (

@@ -17,12 +17,18 @@ export const STATUS_MAP: Record<TripStatus, { label: string; color: string }> = 
   DELAYED: { label: 'Bị trễ', color: 'bg-orange-100 text-orange-700' },
 };
 
+const tripMetaCache = {
+  routes: null as RouteResponse[] | null,
+  vehicles: null as VehicleResponse[] | null,
+  vehicleTypes: null as any[] | null,
+};
+
 export const useAdminTripsPage = () => {
   const { success, error: showError } = useToast();
   const [trips, setTrips] = useState<TripResponse[]>([]);
-  const [routes, setRoutes] = useState<RouteResponse[]>([]);
-  const [vehicles, setVehicles] = useState<VehicleResponse[]>([]);
-  const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<RouteResponse[]>(tripMetaCache.routes || []);
+  const [vehicles, setVehicles] = useState<VehicleResponse[]>(tripMetaCache.vehicles || []);
+  const [vehicleTypes, setVehicleTypes] = useState<any[]>(tripMetaCache.vehicleTypes || []);
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -60,31 +66,45 @@ export const useAdminTripsPage = () => {
   }, [page, isSearching]);
 
   const fetchRoutes = async () => {
+    if (tripMetaCache.routes) return;
     try {
       const apiRes = await routeService.getRoutes({ page: 0, size: 100 });
       const res = apiRes.data.result || apiRes.data.data;
-      if (res) setRoutes(res.content);
+      if (res) {
+        setRoutes(res.content);
+        tripMetaCache.routes = res.content;
+      }
     } catch (err) {
       console.error('Failed to fetch routes');
     }
   };
 
   const fetchVehicles = async () => {
+    if (tripMetaCache.vehicles) return;
     try {
       const apiRes = await vehicleService.getAllVehicles({ page: 0, size: 100 });
       const res = apiRes.data.result || apiRes.data.data;
-      if (res) setVehicles(res.content);
+      if (res) {
+        setVehicles(res.content);
+        tripMetaCache.vehicles = res.content;
+      }
     } catch (err) {
       console.error('Failed to fetch vehicles');
     }
   };
 
   const fetchVehicleTypes = async () => {
+    if (tripMetaCache.vehicleTypes) return;
     try {
       const apiRes = await vehicleService.getVehicleTypes();
       const res = apiRes.data.result || apiRes.data.data;
-      if (Array.isArray(res)) setVehicleTypes(res);
-      else if (res?.content) setVehicleTypes(res.content);
+      if (Array.isArray(res)) {
+        setVehicleTypes(res);
+        tripMetaCache.vehicleTypes = res;
+      } else if (res?.content) {
+        setVehicleTypes(res.content);
+        tripMetaCache.vehicleTypes = res.content;
+      }
     } catch (err) {
       console.error('Failed to fetch vehicle types');
     }
