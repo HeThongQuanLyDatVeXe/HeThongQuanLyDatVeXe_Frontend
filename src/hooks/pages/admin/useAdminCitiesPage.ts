@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { routeService } from '../../../services/route-service/routeService';
 import { adminRouteService } from '../../../services/route-service/adminRouteService';
 import { useToast } from '../../../contexts/ToastContext';
+import { apiCache } from '../../../utils/apiCache';
 import type { CityResponse } from '../../../types/route-service/response';
 
 export type CityForm = { name: string; code: string; province: string; isActive: boolean; sortOrder: number };
@@ -65,6 +66,7 @@ export const useAdminCitiesPage = () => {
         await adminRouteService.createCity(payload);
         success('Thêm thành phố thành công');
       }
+      apiCache.invalidatePrefix('/route/cities');
       setIsModalOpen(false); setEditingCity(null);
       fetchCities();
     } catch (err: any) {
@@ -76,7 +78,12 @@ export const useAdminCitiesPage = () => {
 
   const handleDelete = async (c: CityResponse) => {
     if (!window.confirm(`Xóa thành phố "${c.name}"?`)) return;
-    try { await adminRouteService.deleteCity(c.id); success('Đã xóa thành phố'); fetchCities(); }
+    try { 
+      await adminRouteService.deleteCity(c.id); 
+      success('Đã xóa thành phố'); 
+      apiCache.invalidatePrefix('/route/cities');
+      fetchCities(); 
+    }
     catch (err: any) { showError(extractErrors(err)[0]); }
   };
 

@@ -16,6 +16,12 @@ export const AdminTripsPage: React.FC = () => {
     page,
     setPage,
     totalPages,
+    filterRouteId, setFilterRouteId,
+    filterStatus, setFilterStatus,
+    filterFromDate, setFilterFromDate,
+    filterToDate, setFilterToDate,
+    isSearching,
+    handleSearch, clearSearch,
     isModalOpen,
     editingTrip,
     formData,
@@ -25,7 +31,9 @@ export const AdminTripsPage: React.FC = () => {
     getSelectedRouteDuration,
     fmtDuration,
     handleDepartureChange,
+    handleArrivalChange,
     handleRouteChange,
+    handleVehicleChange,
     handleSubmit,
     handleDelete,
     handleStatusChange,
@@ -41,6 +49,61 @@ export const AdminTripsPage: React.FC = () => {
             Thêm chuyến
           </button>
         </div>
+
+        {/* Filters and Search */}
+        <div className="flex flex-col gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={filterRouteId}
+              onChange={e => setFilterRouteId(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#F4600C] transition-all flex-1 min-w-[200px]"
+            >
+              <option value="">-- Tất cả tuyến đường --</option>
+              {routes.map(r => <option key={r.id} value={r.id}>{r.originCityName} - {r.destinationCityName}</option>)}
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#F4600C] transition-all min-w-[150px]"
+            >
+              <option value="">-- Trạng thái --</option>
+              {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Từ:</span>
+              <input 
+                type="date" 
+                value={filterFromDate} 
+                onChange={e => setFilterFromDate(e.target.value)} 
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#F4600C]"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Đến:</span>
+              <input 
+                type="date" 
+                value={filterToDate} 
+                onChange={e => setFilterToDate(e.target.value)} 
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#F4600C]"
+              />
+            </div>
+
+            <button onClick={handleSearch} className="px-6 py-2.5 bg-[#F4600C] text-white rounded-lg hover:bg-[#D5530A] transition-colors font-medium whitespace-nowrap">
+              Tìm kiếm
+            </button>
+
+            {isSearching && (
+              <button onClick={clearSearch} className="px-6 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 font-medium whitespace-nowrap">
+                Xóa lọc
+              </button>
+            )}
+          </div>
+        </div>
+
+        {isSearching && <p className="text-sm text-slate-500 italic">Đang hiển thị kết quả tìm kiếm/lọc.</p>}
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <table className="w-full text-left border-collapse">
@@ -136,7 +199,7 @@ export const AdminTripsPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Xe</label>
-                    <select required value={formData.vehicleId} onChange={e => setFormData({...formData, vehicleId: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <select required value={formData.vehicleId} onChange={e => handleVehicleChange(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                       <option value="" disabled>-- Chọn xe --</option>
                       {vehicles.map(v => <option key={v.id} value={v.id}>{v.licensePlate}</option>)}
                     </select>
@@ -148,8 +211,8 @@ export const AdminTripsPage: React.FC = () => {
                     <input required type="datetime-local" value={formData.departureDatetime} onChange={e => handleDepartureChange(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Đến (dự kiến) — <span className="text-xs text-slate-400 font-normal">tự động tính</span></label>
-                    <input required type="datetime-local" value={formData.arrivalDatetime} readOnly className="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed" />
+                    <label className="block text-sm font-medium mb-1">Đến (dự kiến) — <span className="text-xs text-slate-400 font-normal">tự động tính hoặc nhập tay</span></label>
+                    <input required type="datetime-local" value={formData.arrivalDatetime} onChange={e => handleArrivalChange(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg" />
                     {getSelectedRouteDuration() > 0 && (
                       <p className="text-xs text-slate-400 mt-1">
                         Thời gian tuyến: <span className="font-semibold text-slate-500">{fmtDuration(getSelectedRouteDuration())}</span>

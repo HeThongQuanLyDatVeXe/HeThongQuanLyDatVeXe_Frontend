@@ -22,12 +22,20 @@ export const useAdminTripsPage = () => {
   const [trips, setTrips] = useState<TripResponse[]>([]);
   const [routes, setRoutes] = useState<RouteResponse[]>([]);
   const [vehicles, setVehicles] = useState<VehicleResponse[]>([]);
-  
+  const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Search & Filter
+  const [filterRouteId, setFilterRouteId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,11 +52,12 @@ export const useAdminTripsPage = () => {
   useEffect(() => {
     fetchRoutes();
     fetchVehicles();
+    fetchVehicleTypes();
   }, []);
 
   useEffect(() => {
     fetchTrips(page);
-  }, [page]);
+  }, [page, isSearching]);
 
   const fetchRoutes = async () => {
     try {
@@ -70,10 +79,32 @@ export const useAdminTripsPage = () => {
     }
   };
 
+  const fetchVehicleTypes = async () => {
+    try {
+      const apiRes = await vehicleService.getVehicleTypes();
+      const res = apiRes.data.result || apiRes.data.data;
+      if (Array.isArray(res)) setVehicleTypes(res);
+      else if (res?.content) setVehicleTypes(res.content);
+    } catch (err) {
+      console.error('Failed to fetch vehicle types');
+    }
+  };
+
   const fetchTrips = async (pageIndex: number) => {
     setLoading(true);
     try {
-      const apiRes = await adminTripService.getAllTrips({ page: pageIndex, size: 10 });
+      // If we only have Date strings (YYYY-MM-DD), append time to make it valid ISO/OffsetDateTime
+      const fromIso = filterFromDate ? `${filterFromDate}T00:00:00Z` : undefined;
+      const toIso = filterToDate ? `${filterToDate}T23:59:59Z` : undefined;
+
+      const apiRes = await adminTripService.getAllTrips({ 
+        page: pageIndex, 
+        size: 10,
+        routeId: isSearching && filterRouteId ? filterRouteId : undefined,
+        status: isSearching && filterStatus ? filterStatus as TripStatus : undefined,
+        from: isSearching && fromIso ? fromIso : undefined,
+        to: isSearching && toIso ? toIso : undefined,
+      });
       const res = apiRes.data.result || apiRes.data.data;
       if (res) {
         setTrips(res.content);
@@ -86,6 +117,30 @@ export const useAdminTripsPage = () => {
     }
   };
 
+  const handleSearch = () => {
+    setPage(0);
+    setIsSearching(true);
+    // Setting isSearching to true and page to 0 will trigger useEffect
+  };
+
+  const clearSearch = () => {
+    setFilterRouteId('');
+    setFilterStatus('');
+    setFilterFromDate('');
+    setFilterToDate('');
+    setIsSearching(false);
+    setPage(0);
+  };
+
+  // Convert ISO string or Date to local datetime-local format: YYYY-MM-DDThh:mm
+  const toDateTimeLocal = (val?: string | Date) => {
+    if (!val) return '';
+    const d = typeof val === 'string' ? new Date(val) : val;
+    if (isNaN(d.getTime())) return '';
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
   const openModal = (trip?: TripResponse) => {
     setFormErrors([]);
     if (trip) {
@@ -93,20 +148,29 @@ export const useAdminTripsPage = () => {
       setFormData({
         routeId: trip.routeId,
         vehicleId: trip.vehicleId,
-        departureDatetime: trip.departureDatetime ? new Date(trip.departureDatetime).toISOString().slice(0,16) : '',
-        arrivalDatetime: trip.arrivalDatetime ? new Date(trip.arrivalDatetime).toISOString().slice(0,16) : '',
+        departureDatetime: toDateTimeLocal(trip.departureDatetime),
+        arrivalDatetime: toDateTimeLocal(trip.arrivalDatetime),
         totalSeats: trip.totalSeats,
         notes: trip.notes || '',
       });
     } else {
       setEditingTrip(null);
+      const defaultVehicleId = vehicles.length > 0 ? vehicles[0].id : '';
+      const defaultVehicle = vehicles.find(v => v.id === defaultVehicleId);
+      
+      let defaultTotalSeats = undefined;
+      if (defaultVehicle) {
+        const vType = vehicleTypes.find(t => t.id === defaultVehicle.vehicleTypeId);
+        if (vType) defaultTotalSeats = vType.totalSeats;
+      }
+
       setFormData({
         routeId: routes.length > 0 ? routes[0].id : '',
-        vehicleId: vehicles.length > 0 ? vehicles[0].id : '',
+        vehicleId: defaultVehicleId,
         departureDatetime: '',
         arrivalDatetime: '',
         notes: '',
-        totalSeats: undefined,
+        totalSeats: defaultTotalSeats,
       });
     }
     setIsModalOpen(true);
@@ -119,7 +183,7 @@ export const useAdminTripsPage = () => {
     if (!selectedRoute?.durationMinutes) return '';
     const dep = new Date(departure);
     dep.setMinutes(dep.getMinutes() + selectedRoute.durationMinutes);
-    return dep.toISOString().slice(0, 16);
+    return toDateTimeLocal(dep);
   };
 
   const getSelectedRouteDuration = () => {
@@ -139,9 +203,28 @@ export const useAdminTripsPage = () => {
     setFormData({ ...formData, departureDatetime: value, arrivalDatetime: arrival });
   };
 
+  const handleArrivalChange = (value: string) => {
+    setFormData({ ...formData, arrivalDatetime: value });
+  };
+
   const handleRouteChange = (routeId: string) => {
     const arrival = calcArrival(formData.departureDatetime, routeId);
     setFormData({ ...formData, routeId, arrivalDatetime: arrival });
+  };
+
+  const handleVehicleChange = (vehicleId: string) => {
+    const selectedVehicle = vehicles.find(v => v.id === vehicleId);
+    let totalSeats = undefined;
+    if (selectedVehicle) {
+      const vType = vehicleTypes.find(t => t.id === selectedVehicle.vehicleTypeId);
+      if (vType) totalSeats = vType.totalSeats;
+    }
+
+    setFormData({ 
+      ...formData, 
+      vehicleId, 
+      totalSeats
+    });
   };
 
   const closeModal = () => {
@@ -229,6 +312,12 @@ export const useAdminTripsPage = () => {
     page,
     setPage,
     totalPages,
+    filterRouteId, setFilterRouteId,
+    filterStatus, setFilterStatus,
+    filterFromDate, setFilterFromDate,
+    filterToDate, setFilterToDate,
+    isSearching,
+    handleSearch, clearSearch,
     isModalOpen,
     editingTrip,
     formData,
@@ -238,7 +327,9 @@ export const useAdminTripsPage = () => {
     getSelectedRouteDuration,
     fmtDuration,
     handleDepartureChange,
+    handleArrivalChange,
     handleRouteChange,
+    handleVehicleChange,
     handleSubmit,
     handleDelete,
     handleStatusChange,

@@ -26,39 +26,6 @@ export const useAdminSeatLayoutsPage = () => {
   const [editIsActive, setEditIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const autoGenerateSeats = useCallback(async (vType: VehicleTypeResponse) => {
-    const totalSeats = vType.totalSeats;
-    const floors = vType.floors || 1;
-    const seatsPerFloor = Math.ceil(totalSeats / floors);
-    const cols = 4; // standard bus layout
-    const rows = Math.ceil(seatsPerFloor / cols);
-
-    const seats: { seatNumber: string; floor: number; rowNumber: number; columnNumber: number; seatType: string; isActive: boolean }[] = [];
-    let seatCount = 0;
-
-    for (let floor = 1; floor <= floors; floor++) {
-      for (let row = 1; row <= rows; row++) {
-        for (let col = 1; col <= cols; col++) {
-          if (seatCount >= totalSeats) break;
-          const floorLabel = floors > 1 ? `T${floor}-` : '';
-          const seatNumber = `${floorLabel}${String.fromCharCode(64 + row)}${col}`;
-          seats.push({ seatNumber, floor, rowNumber: row, columnNumber: col, seatType: 'REGULAR', isActive: true });
-          seatCount++;
-        }
-        if (seatCount >= totalSeats) break;
-      }
-    }
-
-    try {
-      await vehicleService.createSeatLayout(vehicleId!, { seats: seats as any });
-      success(`Đã tự động tạo ${seats.length} ghế cho loại xe "${vType.name}"`);
-      const sRes = await vehicleService.getSeatLayout(vehicleId!);
-      const sData = sRes.data.result || sRes.data.data;
-      setLayouts(Array.isArray(sData) ? sData : []);
-    } catch (err: any) {
-      showError('Lỗi tạo sơ đồ ghế: ' + (err?.response?.data?.message || err?.message || ''));
-    }
-  }, [vehicleId, success, showError]);
 
   const fetchData = useCallback(async () => {
     if (!vehicleId) return;
@@ -79,19 +46,11 @@ export const useAdminSeatLayoutsPage = () => {
 
       const sRes = await vehicleService.getSeatLayout(vehicleId);
       const sData = sRes.data.result || sRes.data.data;
-      const seatList = Array.isArray(sData) ? sData : [];
-      setLayouts(seatList);
-
-      // Auto-generate if empty and vehicleType exists
-      if (seatList.length === 0 && vType && vType.totalSeats > 0) {
-        setLoading(false);
-        await autoGenerateSeats(vType);
-        return;
-      }
+      setLayouts(Array.isArray(sData) ? sData : []);
     } catch (err: any) {
       showError('Lỗi tải dữ liệu: ' + (err?.response?.data?.message || err?.message || ''));
     } finally { setLoading(false); }
-  }, [vehicleId, autoGenerateSeats, showError]);
+  }, [vehicleId, showError]);
 
   useEffect(() => {
     fetchData();

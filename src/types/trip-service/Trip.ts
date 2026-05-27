@@ -24,6 +24,7 @@ export interface RouteInfoResponse {
 
 export interface VehicleInfoResponse {
   id: string;
+  vehicleTypeId?: string;  // UUID → string (added for Kafka integration)
   licensePlate: string;
   brand: string;
   model: string;
@@ -78,6 +79,7 @@ export interface UpdateTripRequest {
 
 export interface UpdateTripStatusRequest {
   status: TripStatus;
+  reason?: string;         // optional reason for status change
 }
 
 // Backend AdminTripFilterRequest uses: status (TripStatus), routeId, from, to (OffsetDateTime), page, size, sortBy, sortDir
@@ -106,6 +108,7 @@ export interface TripSearchRequest {
 
 // ─── Seat Map ───────────────────────────────────────────────────────────────
 export interface SeatInfo {
+  seatId?: string;       // UUID from Vehicle Service seat layout
   seatNumber: string;
   floor: number;         // Integer
   rowNumber: number;     // Integer
@@ -148,6 +151,7 @@ export interface TripCrewResponse {
 
 export interface AssignCrewRequest {
   driverId: string;
+  role?: string;           // "driver" | "assistant" — defaults to "driver" on backend
 }
 
 // ─── Trip Templates ─────────────────────────────────────────────────────────

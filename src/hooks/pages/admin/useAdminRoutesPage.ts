@@ -4,6 +4,7 @@ import { adminRouteService } from '../../../services/route-service/adminRouteSer
 import { useToast } from '../../../contexts/ToastContext';
 import type { RouteResponse, CityResponse, RouteStatus, PointResponse, RouteStopPointResponse } from '../../../types/route-service/response';
 import type { CreateRouteRequest } from '../../../types/route-service/request';
+import { apiCache } from '../../../utils/apiCache';
 
 export const STATUS_MAP: Record<RouteStatus, { label: string; color: string }> = {
   ACTIVE: { label: 'Hoạt động', color: 'bg-green-100 text-green-700' },
@@ -162,6 +163,7 @@ export const useAdminRoutesPage = () => {
     try {
       if (editingRoute) { await adminRouteService.updateRoute(editingRoute.id, formData); }
       else { await adminRouteService.createRoute(formData); }
+      apiCache.invalidatePrefix('/route/routes');
       closeModal();
       success(editingRoute ? 'Cập nhật tuyến đường thành công' : 'Thêm tuyến đường thành công');
       fetchRoutes(page);
@@ -171,12 +173,22 @@ export const useAdminRoutesPage = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Xóa tuyến đường này?')) return;
-    try { await adminRouteService.deleteRoute(id); success('Đã xóa tuyến đường'); fetchRoutes(page); }
+    try { 
+      await adminRouteService.deleteRoute(id); 
+      success('Đã xóa tuyến đường'); 
+      apiCache.invalidatePrefix('/route/routes');
+      fetchRoutes(page); 
+    }
     catch (err: any) { showError(err.response?.data?.message || 'Không thể xóa tuyến đường'); }
   };
 
   const handleStatusChange = async (route: RouteResponse, newStatus: RouteStatus) => {
-    try { await adminRouteService.updateRouteStatus(route.id, { status: newStatus }); success(`${route.name} → ${STATUS_MAP[newStatus].label}`); fetchRoutes(page); }
+    try { 
+      await adminRouteService.updateRouteStatus(route.id, { status: newStatus }); 
+      success(`${route.name} → ${STATUS_MAP[newStatus].label}`); 
+      apiCache.invalidatePrefix('/route/routes');
+      fetchRoutes(page); 
+    }
     catch (err: any) { showError(err.response?.data?.message || 'Không thể cập nhật trạng thái'); }
   };
 
@@ -208,6 +220,7 @@ export const useAdminRoutesPage = () => {
       };
       await adminRouteService.addRouteStopPoint(selectedRoute.id, payload);
       success('Thêm điểm dừng thành công');
+      apiCache.invalidatePrefix('/route/routes');
       // refresh
       const res = await routeService.getRouteStopPoints(selectedRoute.id);
       setStopPoints((res.data.result || res.data.data) ?? []);
@@ -228,7 +241,8 @@ export const useAdminRoutesPage = () => {
     try {
       await adminRouteService.removeRouteStopPoint(selectedRoute.id, spId);
       success('Đã xóa điểm dừng');
-      setStopPoints(prev => prev.filter(sp => sp.id !== spId));
+      apiCache.invalidatePrefix('/route/routes');
+      setStopPoints(prev => prev.filter(sp => sp.stopPointId !== spId));
     } catch (err: any) { showError(err.response?.data?.message || 'Không thể xóa điểm dừng'); }
   };
 

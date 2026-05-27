@@ -333,13 +333,16 @@ export const AdminRoutesPage: React.FC = () => {
                         <td className="px-4 py-3 font-medium">{sp.stopOrder}</td>
                         <td className="px-4 py-3">{sp.stopPointName || 'N/A'}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${sp.type === 'PICKUP' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {sp.type === 'PICKUP' ? 'Đón' : 'Trả'}
-                          </span>
+                          {sp.isPickup && (
+                            <span className="px-2 py-0.5 mr-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">Đón</span>
+                          )}
+                          {sp.isDropoff && (
+                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">Trả</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">{sp.arrivalOffsetMinutes ?? 0} / {sp.departureOffsetMinutes ?? 0} phút</td>
                         <td className="px-4 py-3">
-                          <button onClick={() => handleRemoveStopPoint(sp.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Xóa">
+                          <button onClick={() => handleRemoveStopPoint(sp.stopPointId)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Xóa">
                             <span className="material-symbols-outlined text-sm">delete</span>
                           </button>
                         </td>
