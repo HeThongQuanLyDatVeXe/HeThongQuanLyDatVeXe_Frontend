@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { useAuth } from '../hooks/user-service/useAuth';
 
@@ -87,9 +87,8 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 export const AppRouter: React.FC = () => {
     return (
-        <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-                <Routes>
+        <Suspense fallback={<PageLoader />}>
+            <Routes>
                     <Route path={ROUTES.HOME} element={<LandingPage />} />
                     <Route path={ROUTES.ROUTES} element={<RoutesPage />} />
                     <Route path={ROUTES.ROUTE_TRIPS} element={<RouteTripsPage />} />
@@ -310,8 +309,7 @@ export const AppRouter: React.FC = () => {
                     />
 
                     <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-                </Routes>
-            </Suspense>
-        </BrowserRouter>
+            </Routes>
+        </Suspense>
     );
 };

@@ -197,14 +197,6 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         {children}
       </div>
 
-      {/* Floating support button */}
-      <button
-        className="fixed bottom-8 right-8 w-14 h-14 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-transform z-[60]"
-        style={{ backgroundColor: '#1A1410' }}
-        title="Hỗ trợ"
-      >
-        <span className="material-symbols-outlined">support_agent</span>
-      </button>
     </div>
   );
 };
