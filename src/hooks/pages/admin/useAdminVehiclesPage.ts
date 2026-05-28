@@ -50,6 +50,14 @@ export const useAdminVehiclesPage = () => {
   useEffect(() => { fetchVehicleTypes(); }, []);
   useEffect(() => { fetchVehicles(page); }, [page]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchVehicles(page);
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, [page]);
+
   const fetchVehicleTypes = async () => {
     try {
       const res = await vehicleService.getVehicleTypes();

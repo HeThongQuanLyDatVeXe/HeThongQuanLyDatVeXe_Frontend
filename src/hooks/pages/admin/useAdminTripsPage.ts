@@ -65,6 +65,14 @@ export const useAdminTripsPage = () => {
     fetchTrips(page);
   }, [page, isSearching]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchTrips(page);
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, [page, isSearching, filterRouteId, filterStatus, filterFromDate, filterToDate]);
+
   const fetchRoutes = async () => {
     if (tripMetaCache.routes) return;
     try {

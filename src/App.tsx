@@ -4,6 +4,12 @@ import { AppRouter } from './routers/AppRouter';
 import AiChatbot from './components/common/AiChatbot';
 
 import { BrowserRouter } from 'react-router-dom';
+import { useDataSync } from './hooks/useDataSync';
+
+function DataSyncWrapper() {
+  useDataSync();
+  return null;
+}
 
 function App() {
   return (
@@ -12,6 +18,7 @@ function App() {
         <AuthProvider>
           <AppRouter />
           <AiChatbot />
+          <DataSyncWrapper />
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

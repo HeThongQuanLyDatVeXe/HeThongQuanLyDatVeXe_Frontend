@@ -36,6 +36,19 @@ export const useRouteTripsPage = () => {
     loadData();
   }, [routeId]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      if (routeId) {
+        loadData();
+        if (selectedTripId) {
+          fetchSeatMapForTrip(selectedTripId);
+        }
+      }
+    };
+    window.addEventListener('public-data-changed', handleDataChanged);
+    return () => window.removeEventListener('public-data-changed', handleDataChanged);
+  }, [routeId, selectedTripId]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -137,15 +150,7 @@ export const useRouteTripsPage = () => {
   }, [trips, dateFilter, vehicleTypeFilter, onlyAvailable, timeFilter, sortBy]);
 
 
-  const handleSelectTrip = async (tripId: string) => {
-    if (selectedTripId === tripId) {
-      setSelectedTripId(null);
-      setSeatMap(null);
-      setSelectedSeats([]);
-      return;
-    }
-    setSelectedTripId(tripId);
-    setSelectedSeats([]);
+  const fetchSeatMapForTrip = async (tripId: string) => {
     setSeatMapLoading(true);
     try {
       const res = await publicTripService.getSeatMap(tripId);
@@ -156,6 +161,18 @@ export const useRouteTripsPage = () => {
     } finally {
       setSeatMapLoading(false);
     }
+  };
+
+  const handleSelectTrip = async (tripId: string) => {
+    if (selectedTripId === tripId) {
+      setSelectedTripId(null);
+      setSeatMap(null);
+      setSelectedSeats([]);
+      return;
+    }
+    setSelectedTripId(tripId);
+    setSelectedSeats([]);
+    await fetchSeatMapForTrip(tripId);
   };
 
   const toggleSeat = (seatNumber: string) => {

@@ -41,6 +41,14 @@ export const useAdminDriversPage = () => {
 
   useEffect(() => { fetchDrivers(page); }, [page]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchDrivers(page);
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, [page]);
+
   const fetchDrivers = async (pg: number) => {
     setLoading(true);
     try {

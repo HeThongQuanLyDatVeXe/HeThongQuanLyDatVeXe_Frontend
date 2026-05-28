@@ -83,6 +83,17 @@ export const useAdminPricesPage = () => {
     if (activeTab === 'seasonal') fetchSeasonal();
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      if (activeTab === 'base') fetchBasePrices(true);
+      if (activeTab === 'rules') fetchRules(true);
+      if (activeTab === 'surcharges') fetchSurcharges(true);
+      if (activeTab === 'seasonal') fetchSeasonal(true);
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, [activeTab]);
+
   const fetchMetadata = async () => {
     if (pricingCache.routes && pricingCache.vehicleTypes) return;
     try {

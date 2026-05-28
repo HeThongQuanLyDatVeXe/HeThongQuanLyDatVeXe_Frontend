@@ -62,7 +62,17 @@ export const useAdminRoutesPage = () => {
   });
 
   useEffect(() => { fetchCities(); fetchAllPoints(); }, []);
-  useEffect(() => { fetchRoutes(page); }, [page]);
+  useEffect(() => {
+    fetchRoutes(page);
+  }, [page, isSearching]);
+
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchRoutes(page);
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, [page, isSearching, searchKeyword, filterOrigin, filterDestination, filterStatus]);
 
   const fetchCities = async () => {
     try {

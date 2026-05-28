@@ -28,6 +28,14 @@ export const useAdminUsersPage = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchUsers();
+    };
+    window.addEventListener('admin-data-changed', handleDataChanged);
+    return () => window.removeEventListener('admin-data-changed', handleDataChanged);
+  }, []);
+
   const filtered = users.filter(
     (u) =>
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||

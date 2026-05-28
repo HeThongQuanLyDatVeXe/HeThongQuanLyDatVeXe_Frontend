@@ -32,6 +32,26 @@ export const useSeatSelectionPage = () => {
     fetchTrip();
   }, [id, passedState]);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      if (id) {
+        // We can't easily extract fetchTrip since it's defined inside useEffect,
+        // so we'll just implement the fetch logic here again or refactor.
+        setLoadingTrip(true);
+        publicTripService.getTripById(id).then(res => {
+            const payload = res.data.result || res.data.data;
+            if (payload) setTrip(payload);
+        }).catch(err => {
+            console.error('Failed to refetch trip', err);
+        }).finally(() => {
+            setLoadingTrip(false);
+        });
+      }
+    };
+    window.addEventListener('public-data-changed', handleDataChanged);
+    return () => window.removeEventListener('public-data-changed', handleDataChanged);
+  }, [id]);
+
   const ct = passedState?.currentTrip || (trip ? {
     id: trip.id,
     from: trip.route?.originCityName || '—',
@@ -80,6 +100,12 @@ export const useSeatSelectionPage = () => {
       }
     };
     fetchSeatMap();
+
+    const handleDataChanged = () => {
+        if (id) fetchSeatMap();
+    };
+    window.addEventListener('public-data-changed', handleDataChanged);
+    return () => window.removeEventListener('public-data-changed', handleDataChanged);
   }, [id]);
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);

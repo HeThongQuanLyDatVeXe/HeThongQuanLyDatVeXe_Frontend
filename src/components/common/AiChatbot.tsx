@@ -10,6 +10,7 @@ import { adminTripService } from '../../services/trip-service/adminTripService';
 import { adminUserService } from '../../services/user-service/adminUserService';
 import { adminDriverService } from '../../services/driver-service/adminDriverService';
 import { vehicleService } from '../../services/vehicle-service/vehicleService';
+import { apiCache } from '../../utils/apiCache';
 
 interface Message {
   id: string;
@@ -111,25 +112,49 @@ const AiChatbot: React.FC = () => {
         toast.loading('Đang cập nhật giá...', { id: 'aiAction' });
         const res = await adminPriceService.getAllBasePrices();
         const basePrices = res.data.result || [];
-        const targetPrices = basePrices.filter((p: any) => p.routeId === parsed.routeId);
+        let targetPrices = basePrices.filter((p: any) => p.routeId === parsed.routeId);
+        if (parsed.vehicleTypeId) {
+          targetPrices = targetPrices.filter((p: any) => p.vehicleTypeId === parsed.vehicleTypeId);
+        }
+        if (parsed.seatType) {
+          // Normalize seatType comparison (case-insensitive)
+          targetPrices = targetPrices.filter((p: any) => 
+            p.seatType && parsed.seatType && p.seatType.toUpperCase() === parsed.seatType.toUpperCase()
+          );
+        }
         if (targetPrices.length === 0) {
-          toast.error('Không tìm thấy cấu hình giá nào cho tuyến này!', { id: 'aiAction' });
+          toast.error('Không tìm thấy cấu hình giá nào khớp với yêu cầu!', { id: 'aiAction' });
           return;
         }
+        
+        const finalPrice = parsed.amount || parsed.price;
+        if (!finalPrice) {
+          toast.error('Không tìm thấy giá trị tiền (amount/price) trong lệnh AI!', { id: 'aiAction' });
+          return;
+        }
+
         for (const bp of targetPrices) {
+          // Format effectiveFrom and effectiveTo securely
+          let eFrom = bp.effectiveFrom;
+          if (Array.isArray(eFrom)) eFrom = `${eFrom[0]}-${String(eFrom[1]).padStart(2,'0')}-${String(eFrom[2]).padStart(2,'0')}`;
+          
+          let eTo = bp.effectiveTo;
+          if (Array.isArray(eTo)) eTo = `${eTo[0]}-${String(eTo[1]).padStart(2,'0')}-${String(eTo[2]).padStart(2,'0')}`;
+
           await adminPriceService.updateBasePrice(bp.id, {
-            routeId: bp.routeId, vehicleTypeId: bp.vehicleTypeId, seatType: bp.seatType,
-            price: parsed.amount, currency: bp.currency || 'VND',
-            effectiveFrom: bp.effectiveFrom, effectiveTo: bp.effectiveTo,
+            price: Number(finalPrice), 
+            currency: bp.currency || 'VND',
+            effectiveFrom: eFrom, 
+            effectiveTo: eTo || undefined,
             isActive: bp.isActive !== undefined ? bp.isActive : true
           } as any);
         }
-        toast.success(`Đã cập nhật giá tuyến thành ${parsed.amount} VNĐ!`, { id: 'aiAction' });
+        toast.success(`Đã cập nhật giá thành ${finalPrice} VNĐ!`, { id: 'aiAction' });
       } else if (parsed.action === 'CREATE_BASE_PRICE') {
         toast.loading('Đang tạo giá cơ bản...', { id: 'aiAction' });
         await adminPriceService.createBasePrice({
           routeId: parsed.routeId, vehicleTypeId: parsed.vehicleTypeId,
-          seatType: parsed.seatType || 'STANDARD', price: parsed.price, currency: parsed.currency || 'VND',
+          seatType: parsed.seatType || 'REGULAR', price: parsed.price || parsed.amount, currency: parsed.currency || 'VND',
           effectiveFrom: parsed.effectiveFrom || new Date().toISOString().split('T')[0]
         } as any);
         toast.success('Đã tạo giá cơ bản thành công!', { id: 'aiAction' });
@@ -181,6 +206,11 @@ const AiChatbot: React.FC = () => {
       } else {
         toast.error(`Hành động "${parsed.action}" chưa được hỗ trợ.`, { id: 'aiAction' });
       }
+
+      // Xóa toàn bộ cache frontend sau khi AI thực thi lệnh
+      // Lần tới khi Admin chuyển trang hoặc refresh table, data mới sẽ được gọi.
+      apiCache.clearAll();
+
     } catch (err: any) {
       console.error('Error executing AI action:', err);
       toast.error('Lỗi khi thực thi. Vui lòng thao tác thủ công.', { id: 'aiAction' });
