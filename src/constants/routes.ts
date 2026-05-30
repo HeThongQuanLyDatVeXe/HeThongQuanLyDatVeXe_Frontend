@@ -35,6 +35,7 @@ export const ROUTES = {
   ADMIN_TRIP_OVERRIDES: '/admin/trips/:id/seat-overrides',
   ADMIN_TRIP_DETAIL: '/admin/trips/:id',
   ADMIN_TRIPS: '/admin/trips',
+  ADMIN_BOOKINGS: '/admin/bookings',
   ADMIN_TRIP_TEMPLATES: '/admin/trip-templates',
   ADMIN_DRIVERS: '/admin/drivers',
   ADMIN_DRIVER_DETAIL: '/admin/drivers/:id',

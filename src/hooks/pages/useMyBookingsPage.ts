@@ -93,6 +93,16 @@ export const useMyBookingsPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const pageSize = 5;
+
+  // Custom Detailed Filters
+  const [bookingFilter, setBookingFilter] = useState<string>('ALL');
+  const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
+
   // PayOS Embedded Modal States & Refs for Unpaid Booking "Thanh toán ngay"
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState('');
@@ -105,9 +115,11 @@ export const useMyBookingsPage = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const res = await bookingService.getBookingsByUser(user.id);
+        const res = await bookingService.getBookingsByUser(user.id, currentPage, pageSize);
         const data = res.data.result || res.data.data;
-        const rawList = Array.isArray(data) ? data : (data?.content || []);
+        const rawList = data?.content || [];
+        setTotalPages(data?.totalPages || 0);
+        setTotalElements(data?.totalElements || 0);
         
         // Fetch trip details for all unique tripIds
         const uniqueTripIds = Array.from(new Set(rawList.map((b: any) => b.tripId))) as string[];
@@ -173,12 +185,36 @@ export const useMyBookingsPage = () => {
       }
     };
     fetchBookings();
-  }, [user?.id]);
+  }, [user?.id, currentPage]);
 
-  const filteredBookings =
-    activeTab === 'all'
-      ? bookings
-      : bookings.filter((b) => b.status === activeTab);
+  const handlePageChange = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleTabChange = (tab: TabFilter) => {
+    setActiveTab(tab);
+    setCurrentPage(0);
+  };
+
+  const handleBookingFilterChange = (filter: string) => {
+    setBookingFilter(filter);
+    setCurrentPage(0);
+  };
+
+  const handlePaymentFilterChange = (filter: string) => {
+    setPaymentFilter(filter);
+    setCurrentPage(0);
+  };
+
+  const filteredBookings = bookings.filter((b) => {
+    const matchesTab = activeTab === 'all' || b.status === activeTab;
+    const matchesBooking = bookingFilter === 'ALL' || b.rawBookingStatus === bookingFilter;
+    const matchesPayment = paymentFilter === 'ALL' || b.rawPaymentStatus === paymentFilter;
+    return matchesTab && matchesBooking && matchesPayment;
+  });
 
   const nextTrip = bookings.find((b) => b.status === 'upcoming');
 
@@ -230,7 +266,7 @@ export const useMyBookingsPage = () => {
           const payosInstance = (window as any).PayOSCheckout;
           if (payosInstance) {
             const config = {
-              RETURN_URL: "http://localhost:3000/payments/return",
+              RETURN_URL: window.location.origin,
               ELEMENT_ID: "embedded-payment-container",
               CHECKOUT_URL: checkoutUrl,
               embedded: true,
@@ -295,20 +331,27 @@ export const useMyBookingsPage = () => {
     const snapshot = activeBookingForPayment;
     setShowPaymentModal(false);
     setActiveBookingForPayment(null);
+    setPaymentUrl('');
 
     if (snapshot) {
       setLoading(true);
       try {
-        // Blindly confirm the booking upon closing the modal
-        await bookingService.confirmBooking(snapshot.id, {
-          transactionRef: 'manual-confirm',
-          provider: 'PAYOS'
-        });
-
-        alert("Thanh toán thành công! Vé xe của bạn đã được xác nhận.");
+        // Query the server one final time to check if the payment actually succeeded
+        const checkRes = await bookingService.getBookingByCode(snapshot.bookingCode);
+        const latestBooking = checkRes.data.result || checkRes.data.data;
+        
+        if (
+          latestBooking &&
+          latestBooking.bookingStatus === 'CONFIRMED' &&
+          latestBooking.paymentStatus === 'PAID'
+        ) {
+          alert("Thanh toán thành công! Vé xe của bạn đã được xác nhận.");
+        } else {
+          alert("Đã đóng trình thanh toán. Bạn có thể thực hiện thanh toán lại bất kỳ lúc nào trong mục 'Vé của tôi' trước khi vé hết hạn.");
+        }
         window.location.reload();
       } catch (err) {
-        console.error("Failed to manually confirm booking on modal close:", err);
+        console.error("Failed to check booking status on modal close:", err);
         // Fallback reload anyway to show latest status
         window.location.reload();
       } finally {
@@ -353,7 +396,7 @@ export const useMyBookingsPage = () => {
   return {
     user,
     activeTab,
-    setActiveTab,
+    setActiveTab: handleTabChange,
     filteredBookings,
     nextTrip,
     avatarInitials,
@@ -367,6 +410,14 @@ export const useMyBookingsPage = () => {
     paymentUrl,
     activeBookingForPayment,
     handlePayNow,
-    handleClosePaymentModal
+    handleClosePaymentModal,
+    currentPage,
+    setCurrentPage: handlePageChange,
+    totalPages,
+    totalElements,
+    bookingFilter,
+    setBookingFilter: handleBookingFilterChange,
+    paymentFilter,
+    setPaymentFilter: handlePaymentFilterChange
   };
 };

@@ -31,6 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Thành phố',    path: ROUTES.ADMIN_CITIES,    icon: 'location_city' },
       { label: 'Điểm dừng',    path: ROUTES.ADMIN_POINTS,    icon: 'location_on' },
       { label: 'Lịch trình',   path: ROUTES.ADMIN_TRIPS,     icon: 'calendar_month' },
+      { label: 'Vé & Đặt chỗ', path: ROUTES.ADMIN_BOOKINGS,  icon: 'confirmation_number' },
       { label: 'Mẫu lịch trình', path: ROUTES.ADMIN_TRIP_TEMPLATES, icon: 'event_repeat' },
       { label: 'Tài xế',       path: ROUTES.ADMIN_DRIVERS,   icon: 'badge' },
       { label: 'Xe',           path: ROUTES.ADMIN_VEHICLES,  icon: 'directions_bus' },

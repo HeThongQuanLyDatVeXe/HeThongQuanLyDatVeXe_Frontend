@@ -25,7 +25,15 @@ export const MyBookingsPage: React.FC = () => {
         paymentUrl,
         activeBookingForPayment,
         handlePayNow,
-        handleClosePaymentModal
+        handleClosePaymentModal,
+        currentPage,
+        setCurrentPage,
+        totalPages,
+        totalElements,
+        bookingFilter,
+        setBookingFilter,
+        paymentFilter,
+        setPaymentFilter
     } = useMyBookingsPage();
 
     return (
@@ -96,6 +104,37 @@ export const MyBookingsPage: React.FC = () => {
                         ))}
                     </div>
 
+                    {/* ── Detailed Filter Options ── */}
+                    <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-start bg-slate-50/50 border border-slate-100 p-4 rounded-xl">
+                        <div className="flex flex-col gap-1.5 flex-1 text-left">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Trạng thái đặt vé</span>
+                            <select
+                                value={bookingFilter}
+                                onChange={(e) => setBookingFilter(e.target.value)}
+                                className="w-full bg-white border border-slate-200/80 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer"
+                            >
+                                <option value="ALL">Tất cả đặt vé</option>
+                                <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
+                                <option value="PENDING">Chờ thanh toán (PENDING)</option>
+                                <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                                <option value="EXPIRED">Hết hạn (EXPIRED)</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1.5 flex-1 text-left">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Trạng thái thanh toán</span>
+                            <select
+                                value={paymentFilter}
+                                onChange={(e) => setPaymentFilter(e.target.value)}
+                                className="w-full bg-white border border-slate-200/80 rounded-lg px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer"
+                            >
+                                <option value="ALL">Tất cả thanh toán</option>
+                                <option value="PAID">Đã thanh toán (PAID)</option>
+                                <option value="UNPAID">Chưa thanh toán (UNPAID)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     {/* ── Booking cards ── */}
                     <div className="flex flex-col gap-5">
                         {loading ? (
@@ -119,6 +158,48 @@ export const MyBookingsPage: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* ── Sleek Premium Pagination ── */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t border-outline-variant pt-6 mt-4 flex-wrap gap-4">
+                            <span className="text-xs text-on-surface-variant font-semibold">
+                                Hiển thị trang {currentPage + 1} / {totalPages} (Tổng số {totalElements} vé)
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(currentPage - 1)}
+                                    disabled={currentPage === 0}
+                                    className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold transition-all duration-200 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                >
+                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                    Trang trước
+                                </button>
+                                
+                                {Array.from({ length: totalPages }).map((_, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setCurrentPage(i)}
+                                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                                            currentPage === i
+                                                ? 'bg-[#F4600C] text-white border-[#F4600C] shadow-md shadow-orange-500/15'
+                                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                        }`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => setCurrentPage(currentPage + 1)}
+                                    disabled={currentPage === totalPages - 1}
+                                    className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold transition-all duration-200 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                >
+                                    Trang sau
+                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </section>
             </main>
 
@@ -188,8 +269,8 @@ export const MyBookingsPage: React.FC = () => {
                             </div>
 
                             {/* Embedded container where PayOS Checkout SDK renders the iframe */}
-                            <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/80 border border-slate-100 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-                                <div className="loading-spinner-wrapper flex flex-col items-center gap-3 text-slate-400">
+                            <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/80 border border-slate-100 rounded-2xl overflow-hidden shadow-inner">
+                                <div className="loading-spinner-wrapper absolute inset-0 bg-[#fffbfa]/95 flex flex-col items-center justify-center gap-3 text-slate-400 z-10">
                                     <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
                                     <p className="text-xs font-medium tracking-wide">Đang kết nối cổng thanh toán PayOS...</p>
                                 </div>

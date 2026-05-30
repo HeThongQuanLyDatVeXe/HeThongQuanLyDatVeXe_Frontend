@@ -256,8 +256,8 @@ export const CheckoutPage: React.FC = () => {
                                     )}
 
                                     {/* Inline Iframe mounting container */}
-                                    <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/50 border border-slate-200/60 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-                                        <div className="loading-spinner-wrapper flex flex-col items-center gap-3 text-slate-400">
+                                    <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/50 border border-slate-200/60 rounded-2xl overflow-hidden shadow-inner">
+                                        <div className="loading-spinner-wrapper absolute inset-0 bg-[#fffbfa]/95 flex flex-col items-center justify-center gap-3 text-slate-400 z-10">
                                             <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
                                             <p className="text-xs font-medium tracking-wide">Đang kết nối cổng thanh toán PayOS...</p>
                                         </div>
@@ -317,9 +317,7 @@ export const CheckoutPage: React.FC = () => {
                                 handleApplyPromo={handleApplyPromo}
                                 promoMessage={promoMessage}
                                 appliedDiscount={appliedDiscount}
-                                handleCheckout={handleProcessPayment}
-                                isProcessing={isProcessing}
-                                buttonText={paymentUrl ? "Đang thanh toán..." : "Thực hiện thanh toán"}
+                                showButton={false}
                             />
                         </div>
                     </div>
