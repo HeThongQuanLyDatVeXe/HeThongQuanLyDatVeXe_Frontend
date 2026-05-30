@@ -158,5 +158,19 @@ export const bookingService = {
       const rawData = res.data?.result || res.data?.data || res.data;
       return { data: { code: 200, result: rawData } as ApiResponse<ChangeTripResponse> };
     });
+  },
+
+  getAllBookings(search?: string, status?: string, page = 0, size = 10) {
+    return bookingAxiosInstance.get<any>('/bookings', { params: { search, status, page, size } }).then(res => {
+      const rawData = res.data?.result || res.data?.data || res.data;
+      return { data: { code: 200, result: rawData } as ApiResponse<any> };
+    });
+  },
+
+  getTripSeats(tripId: string) {
+    return bookingAxiosInstance.get<any>(`/trip-seats/trips/${tripId}`).then(res => {
+      const rawData = res.data?.result || res.data?.data || res.data;
+      return { data: { code: 200, result: rawData } as ApiResponse<any> };
+    });
   }
 };

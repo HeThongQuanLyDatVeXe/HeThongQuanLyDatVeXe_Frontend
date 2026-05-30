@@ -196,16 +196,39 @@ export const useCheckoutPage = () => {
         window.scrollTo(0, 0);
     }, []);
 
-    // ── Verify cached booking state on mount ──────────────────────────────────
+    // ── Reset checkout session state when trip or selected seats change ───────
     useEffect(() => {
-        const verifyCachedBooking = async () => {
-            if (createdBooking) {
+        console.log("Checkout session changed. Resetting states for key:", bookingCacheKey);
+        
+        let newBooking = null;
+        if (bookingCacheKey) {
+            const cached = window.sessionStorage.getItem(bookingCacheKey);
+            if (cached) {
                 try {
-                    const checkRes = await bookingService.getBookingByCode(createdBooking.bookingCode);
+                    newBooking = JSON.parse(cached);
+                } catch (e) {
+                    console.error("Failed to parse cached booking", e);
+                }
+            }
+        }
+        
+        setCreatedBooking(newBooking);
+        setPaymentUrl('');
+        setPaymentError(null);
+        setIsProcessing(false);
+        setPromoInput('');
+        setAppliedDiscount(0);
+        setPromoMessage(null);
+        setFormErrors({});
+        
+        if (newBooking) {
+            const verifyBooking = async () => {
+                try {
+                    const checkRes = await bookingService.getBookingByCode(newBooking.bookingCode);
                     const latestBooking = checkRes.data.result || checkRes.data.data;
                     if (latestBooking) {
                         if (latestBooking.bookingStatus === 'CANCELLED' || latestBooking.bookingStatus === 'EXPIRED') {
-                            console.log("Cached booking has been cancelled/expired on backend. Resetting flow to Step 1.");
+                            console.log("Cached booking has been cancelled/expired on backend. Resetting.");
                             if (bookingCacheKey) {
                                 window.sessionStorage.removeItem(bookingCacheKey);
                             }
@@ -223,15 +246,15 @@ export const useCheckoutPage = () => {
                         }
                     }
                 } catch (err) {
-                    console.error("Checking cached booking on mount failed. Defaulting to Step 2.", err);
+                    console.error("Checking cached booking failed. Defaulting to Step 2.", err);
                     setActiveStep(2);
                 }
-            } else {
-                setActiveStep(1);
-            }
-        };
-        verifyCachedBooking();
-    }, []);
+            };
+            verifyBooking();
+        } else {
+            setActiveStep(1);
+        }
+    }, [bookingCacheKey]);
 
     // ── PayOS Checkout Hook State and Integration ──────────────────────────
     const [payOSConfig, setPayOSConfig] = useState<any>({

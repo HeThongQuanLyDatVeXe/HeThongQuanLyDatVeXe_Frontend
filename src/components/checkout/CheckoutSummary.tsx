@@ -10,9 +10,10 @@ interface CheckoutSummaryProps {
     handleApplyPromo: () => void;
     promoMessage: { isError: boolean; text: string } | null;
     appliedDiscount: number;
-    handleCheckout: (e?: React.FormEvent) => void;
-    isProcessing: boolean;
+    handleCheckout?: (e?: React.FormEvent) => void;
+    isProcessing?: boolean;
     buttonText?: string;
+    showButton?: boolean;
 }
 
 export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
@@ -25,9 +26,10 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     handleApplyPromo,
     promoMessage,
     appliedDiscount,
-    handleCheckout,
-    isProcessing,
-    buttonText
+    handleCheckout = () => {},
+    isProcessing = false,
+    buttonText,
+    showButton = true
 }) => {
     const fromCity = currentTrip?.from || currentTrip?.route?.originCityName || '—';
     const toCity = currentTrip?.to || currentTrip?.route?.destinationCityName || '—';
@@ -156,32 +158,36 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
             </div>
 
             {/* Checkout CTA */}
-            <button 
-                type="button"
-                onClick={handleCheckout}
-                disabled={isProcessing}
-                className="mt-8 w-full bg-[#F4600C] text-white font-semibold text-base py-4 rounded-xl hover:bg-[#c94c00] active:scale-98 transition-all shadow-lg hover:shadow-xl relative z-10 flex items-center justify-center gap-2 cursor-pointer border-none uppercase tracking-wider disabled:opacity-75 disabled:cursor-not-allowed"
-            >
-                {isProcessing ? (
-                    <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Đang xử lý...
-                    </>
-                ) : (
-                    <>
-                        {buttonText || 'Xác nhận & Thanh toán'}
-                        <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </>
-                )}
-            </button>
-            
-            <p className="text-xs text-on-surface-variant text-center mt-4 relative z-10 leading-relaxed">
-                Bằng việc bấm xác nhận, bạn đồng ý với các{' '}
-                <a className="text-primary hover:underline font-semibold" href="#">điều khoản</a> của chúng tôi.
-            </p>
+            {showButton && (
+                <>
+                    <button 
+                        type="button"
+                        onClick={handleCheckout}
+                        disabled={isProcessing}
+                        className="mt-8 w-full bg-[#F4600C] text-white font-semibold text-base py-4 rounded-xl hover:bg-[#c94c00] active:scale-98 transition-all shadow-lg hover:shadow-xl relative z-10 flex items-center justify-center gap-2 cursor-pointer border-none uppercase tracking-wider disabled:opacity-75 disabled:cursor-not-allowed"
+                    >
+                        {isProcessing ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Đang xử lý...
+                            </>
+                        ) : (
+                            <>
+                                {buttonText || 'Xác nhận & Thanh toán'}
+                                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                            </>
+                        )}
+                    </button>
+                    
+                    <p className="text-xs text-on-surface-variant text-center mt-4 relative z-10 leading-relaxed">
+                        Bằng việc bấm xác nhận, bạn đồng ý với các{' '}
+                        <a className="text-primary hover:underline font-semibold" href="#">điều khoản</a> của chúng tôi.
+                    </p>
+                </>
+            )}
         </div>
     );
 };

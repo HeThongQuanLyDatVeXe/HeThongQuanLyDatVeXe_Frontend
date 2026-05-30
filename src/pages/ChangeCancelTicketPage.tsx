@@ -180,14 +180,24 @@ export const ChangeCancelTicketPage: React.FC = () => {
 
         setSubmittingTripChange(true);
         try {
-            // Workaround: blindly call confirmBooking when modal closes.
-            await bookingService.confirmBooking(booking!.id, {
-                transactionRef: 'manual-confirm',
-                provider: 'PAYOS'
-            });
+            // Check real backend status before deciding
+            const paymentRes = await paymentService.getPaymentByBookingId(booking!.id);
+            const paymentData = paymentRes.data.result || paymentRes.data.data || paymentRes.data;
 
-            // Genuinely paid and changed!
-            navigateToTripChangeSuccess();
+            const bookingRes = await bookingService.getBookingByCode(booking!.bookingCode);
+            const latestBooking = bookingRes.data.result || bookingRes.data.data;
+
+            if (
+                paymentData && paymentData.status === 'PAID' &&
+                latestBooking && latestBooking.tripId === selectedTrip!.id
+            ) {
+                // Genuinely paid and changed!
+                navigateToTripChangeSuccess();
+            } else {
+                alert("Đã đóng trình thanh toán. Thay đổi chuyến xe của bạn chưa được thực hiện thanh toán.");
+                setShowPaymentModal(false);
+                navigate(ROUTES.MY_BOOKINGS);
+            }
         } catch (err) {
             console.error("Checking final transaction status failed", err);
             setShowPaymentModal(false);
@@ -329,7 +339,7 @@ export const ChangeCancelTicketPage: React.FC = () => {
                         const payosInstance = (window as any).PayOSCheckout;
                         if (payosInstance) {
                             const config = {
-                                RETURN_URL: "http://localhost:3000/payments/return",
+                                RETURN_URL: window.location.origin,
                                 ELEMENT_ID: "embedded-payment-container",
                                 CHECKOUT_URL: checkoutUrl,
                                 embedded: true,
@@ -982,8 +992,8 @@ export const ChangeCancelTicketPage: React.FC = () => {
                             </div>
 
                             {/* Embedded container where PayOS Checkout SDK renders the iframe */}
-                            <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/80 border border-slate-100 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-                                <div className="loading-spinner-wrapper flex flex-col items-center gap-3 text-slate-400">
+                            <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/80 border border-slate-100 rounded-2xl overflow-hidden shadow-inner">
+                                <div className="loading-spinner-wrapper absolute inset-0 bg-[#fffbfa]/95 flex flex-col items-center justify-center gap-3 text-slate-400 z-10">
                                     <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
                                     <p className="text-xs font-medium tracking-wide">Đang kết nối cổng thanh toán PayOS...</p>
                                 </div>

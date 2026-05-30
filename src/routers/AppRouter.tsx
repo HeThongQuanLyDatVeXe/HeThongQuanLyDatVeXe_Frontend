@@ -40,6 +40,8 @@ const AdminTripTemplatesPage = React.lazy(() => import('../pages/admin-trip/Admi
 const AdminDriversPage = React.lazy(() => import('../pages/admin-driver/AdminDriversPage').then(m => ({ default: m.AdminDriversPage })));
 const AdminDriverDetailPage = React.lazy(() => import('../pages/admin-driver/AdminDriverDetailPage').then(m => ({ default: m.AdminDriverDetailPage })));
 const AdminPricesPage = React.lazy(() => import('../pages/admin-price/AdminPricesPage').then(m => ({ default: m.AdminPricesPage })));
+const AdminBookingsPage = React.lazy(() => import('../pages/AdminBookingsPage').then(m => ({ default: m.AdminBookingsPage })));
+
 
 // ─── Loading Fallback ───────────────────────────────────────────────────────
 const PageLoader: React.FC = () => (
@@ -263,6 +265,16 @@ export const AppRouter: React.FC = () => {
                             </AdminRoute>
                         )}
                     />
+
+                    <Route
+                        path={ROUTES.ADMIN_BOOKINGS}
+                        element={(
+                            <AdminRoute>
+                                <AdminBookingsPage />
+                            </AdminRoute>
+                        )}
+                    />
+
 
                     <Route
                         path={ROUTES.ADMIN_TRIP_TEMPLATES}
