@@ -14,6 +14,7 @@ export const CheckoutPage: React.FC = () => {
         passedState,
         currentTrip,
         selectedSeats,
+        seatDetails,
         baseTotal,
         fullName,
         setFullName,
@@ -140,6 +141,7 @@ export const CheckoutPage: React.FC = () => {
                             <CheckoutSummary
                                 currentTrip={currentTrip}
                                 selectedSeats={selectedSeats}
+                                seatDetails={seatDetails}
                                 baseTotal={baseTotal}
                                 promoInput={promoInput}
                                 setPromoInput={setPromoInput}
@@ -311,6 +313,7 @@ export const CheckoutPage: React.FC = () => {
                             <CheckoutSummary
                                 currentTrip={currentTrip}
                                 selectedSeats={selectedSeats}
+                                seatDetails={seatDetails}
                                 baseTotal={baseTotal}
                                 promoInput={promoInput}
                                 setPromoInput={setPromoInput}

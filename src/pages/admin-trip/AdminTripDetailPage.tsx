@@ -5,6 +5,17 @@ import type { TripStatus } from '../../types/trip-service/Trip';
 import { ROUTES } from '../../constants/routes';
 import { useAdminTripDetailPage, STATUS_MAP } from '../../hooks/pages/admin/useAdminTripDetailPage';
 
+const getSeatTypeName = (type: string) => {
+    if (!type) return '';
+    const upper = type.toUpperCase();
+    if (upper === 'VIP') return 'VIP';
+    if (upper === 'NORMAL' || upper === 'REGULAR') return 'Thường';
+    if (upper === 'BED') return 'Giường';
+    if (upper === 'DOUBLE_BED') return 'G. Đôi';
+    if (upper === 'LIMOUSINE') return 'Limo';
+    return type;
+};
+
 export const AdminTripDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const {
@@ -156,13 +167,16 @@ export const AdminTripDetailPage: React.FC = () => {
                                                     <h3 className="font-semibold text-center mb-6">Tầng {floor}</h3>
                                                     <div className="grid grid-cols-5 gap-3 max-w-[300px] mx-auto">
                                                         {floorSeats.sort((a,b) => a.rowNumber - b.rowNumber || a.columnNumber - b.columnNumber).map(seat => (
-                                                            <div key={seat.seatNumber} className={`h-12 flex items-center justify-center rounded-lg border-2 text-xs font-bold ${
+                                                            <div key={seat.seatNumber} title={`Ghế: ${seat.seatNumber} - Loại: ${getSeatTypeName(seat.seatType)}`} className={`h-12 flex flex-col items-center justify-center rounded-lg border-2 font-bold ${
                                                                 seat.status === 'AVAILABLE' ? 'border-green-400 bg-green-50 text-green-700' :
                                                                 seat.status === 'BOOKED' ? 'border-slate-300 bg-slate-300 text-slate-500' :
                                                                 seat.status === 'BLOCKED' ? 'border-red-400 bg-red-50 text-red-700' :
                                                                 'border-orange-400 bg-orange-50 text-orange-700'
                                                             }`} style={{ gridRow: seat.rowNumber, gridColumn: seat.columnNumber }}>
-                                                                {seat.seatNumber}
+                                                                <span className="text-xs leading-none">{seat.seatNumber}</span>
+                                                                <span className="text-[10px] mt-1 opacity-75 font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center px-1">
+                                                                    {getSeatTypeName(seat.seatType)}
+                                                                </span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -240,13 +254,13 @@ export const AdminTripDetailPage: React.FC = () => {
                                                 <tr key={b.id || i} className="border-b border-slate-100 hover:bg-slate-50">
                                                     <td className="py-3 px-4 font-mono text-sm">{b.bookingCode || b.id?.substring(0, 8) || `#${i+1}`}</td>
                                                     <td className="py-3 px-4">{b.passengerName || b.customerName || b.userId?.substring(0, 8) || 'N/A'}</td>
-                                                    <td className="py-3 px-4 text-sm">{Array.isArray(b.seatNumbers) ? b.seatNumbers.join(', ') : (b.seatNumber || 'N/A')}</td>
+                                                    <td className="py-3 px-4 text-sm">{Array.isArray(b.seats) ? b.seats.map((s: any) => s.seatNumberSnapshot).join(', ') : 'N/A'}</td>
                                                     <td className="py-3 px-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                        b.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                                                        b.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
-                                                        b.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                                                        b.bookingStatus === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                                                        b.bookingStatus === 'PENDING' ? 'bg-orange-100 text-orange-700' :
+                                                        b.bookingStatus === 'CANCELLED' ? 'bg-red-100 text-red-700' :
                                                         'bg-slate-100 text-slate-700'
-                                                    }`}>{b.status || 'N/A'}</span></td>
+                                                    }`}>{b.bookingStatus || 'N/A'}</span></td>
                                                     <td className="py-3 px-4 font-medium">{b.totalAmount ? Number(b.totalAmount).toLocaleString('vi-VN') + ' đ' : 'N/A'}</td>
                                                 </tr>
                                             ))}

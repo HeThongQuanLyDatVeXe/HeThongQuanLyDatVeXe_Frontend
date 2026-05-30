@@ -19,7 +19,18 @@ export const useAdminCitiesPage = () => {
   const [formData, setFormData] = useState<CityForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
-  useEffect(() => { fetchCities(); }, []);
+  useEffect(() => { 
+    fetchCities(); 
+
+    const handleDataChange = () => {
+        fetchCities();
+    };
+    
+    window.addEventListener('admin-data-changed', handleDataChange);
+    return () => {
+        window.removeEventListener('admin-data-changed', handleDataChange);
+    };
+  }, []);
 
   const fetchCities = async () => {
     setLoading(true);

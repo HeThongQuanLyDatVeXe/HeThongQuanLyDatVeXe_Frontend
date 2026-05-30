@@ -92,7 +92,15 @@ export const useAdminTripDetailPage = (id?: string) => {
         try {
             const res = await adminTripService.getTripBookings(id);
             const payload = res.data.result || res.data.data;
-            setBookings(Array.isArray(payload) ? payload : []);
+            let dataArray = [];
+            if (Array.isArray(payload)) {
+                dataArray = payload;
+            } else if (payload && Array.isArray(payload.content)) {
+                dataArray = payload.content;
+            } else if (payload && Array.isArray(payload.data)) {
+                dataArray = payload.data;
+            }
+            setBookings(dataArray);
         } catch (err) {
             console.error('Failed to fetch bookings');
         } finally {

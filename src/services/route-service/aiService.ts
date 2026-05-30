@@ -8,7 +8,7 @@ export interface AiChatResponse {
   suggestion: string;
 }
 
-const AI_BASE = '/route/ai';
+const AI_BASE = '/ai';
 
 export const aiService = {
   getSuggestion(request: AiChatRequest) {

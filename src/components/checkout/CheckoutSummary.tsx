@@ -3,6 +3,7 @@ import React from 'react';
 interface CheckoutSummaryProps {
     currentTrip: any;
     selectedSeats: string[];
+    seatDetails?: any[];
     baseTotal: number;
     promoInput: string;
     setPromoInput: (val: string) => void;
@@ -17,6 +18,7 @@ interface CheckoutSummaryProps {
 export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     currentTrip,
     selectedSeats,
+    seatDetails,
     baseTotal,
     promoInput,
     setPromoInput,
@@ -31,6 +33,36 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     const toCity = currentTrip?.to || currentTrip?.route?.destinationCityName || '—';
     const vehType = currentTrip?.vehicleType || currentTrip?.vehicle?.vehicleTypeName || 'Giường nằm';
     const tripPrice = currentTrip?.price ?? (currentTrip?.prices?.[0]?.finalPrice ?? currentTrip?.prices?.[0]?.basePrice ?? 200000);
+
+    // Group seats by seatType
+    const seats = seatDetails?.length > 0 ? seatDetails : selectedSeats.map(s => ({ 
+        seatNumber: s, 
+        seatType: 'REGULAR', 
+        price: baseTotal / (selectedSeats.length || 1) 
+    }));
+
+    const groupedSeats = React.useMemo(() => {
+        const groups: Record<string, { count: number, pricePerSeat: number, total: number }> = {};
+        seats.forEach((seat: any) => {
+            const type = seat.seatType || 'REGULAR';
+            if (!groups[type]) {
+                groups[type] = { count: 0, pricePerSeat: seat.price, total: 0 };
+            }
+            groups[type].count += 1;
+            groups[type].total += seat.price;
+        });
+        return groups;
+    }, [seats]);
+
+    const getSeatTypeName = (type: string) => {
+        const upper = type.toUpperCase();
+        if (upper === 'VIP') return 'Ghế VIP';
+        if (upper === 'NORMAL' || upper === 'REGULAR') return 'Ghế Thường';
+        if (upper === 'BED') return 'Giường Nằm';
+        if (upper === 'DOUBLE_BED') return 'Giường Đôi';
+        if (upper === 'LIMOUSINE') return 'Ghế Limousine';
+        return type;
+    };
 
     return (
         <div className="sticky top-[120px] bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-[0_12px_32px_rgba(92,64,51,0.1)] relative overflow-hidden flex flex-col h-full text-left">
@@ -95,10 +127,12 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
 
                 {/* Price breakdown */}
                 <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm text-on-surface-variant">
-                        <span>Giá vé ({selectedSeats.length} x {tripPrice.toLocaleString()}đ)</span>
-                        <span>{baseTotal.toLocaleString()}đ</span>
-                    </div>
+                    {Object.entries(groupedSeats).map(([type, data]) => (
+                        <div key={type} className="flex justify-between items-center text-sm text-on-surface-variant">
+                            <span>{getSeatTypeName(type)} ({data.count} x {data.pricePerSeat.toLocaleString()}đ)</span>
+                            <span className="font-medium text-on-surface">{data.total.toLocaleString()}đ</span>
+                        </div>
+                    ))}
                     <div className="flex justify-between items-center text-sm text-on-surface-variant">
                         <span>Phụ phí</span>
                         <span>0đ</span>

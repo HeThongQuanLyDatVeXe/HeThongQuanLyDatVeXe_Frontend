@@ -5,6 +5,8 @@ import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../hooks/user-service/useAuth';
 import { bookingService } from '../../services/booking-service/bookingService';
 import { paymentService } from '../../services/payment-service/paymentService';
+import { publicTripService } from '../../services/trip-service/publicTripService';
+import { priceService } from '../../services/price-service/priceService';
 
 export interface CheckoutState {
     selectedSeats: string[];
@@ -21,9 +23,10 @@ export const useCheckoutPage = () => {
     // Recover details from route state
     const passedState = location.state as CheckoutState | null;
 
-    const currentTrip = passedState?.currentTrip;
+    const [currentTrip, setCurrentTrip] = useState<any>(passedState?.currentTrip || null);
     const selectedSeats = passedState?.selectedSeats || [];
-    const baseTotal = passedState?.totalAmount || (currentTrip?.price * selectedSeats.length) || 0;
+    const [baseTotal, setBaseTotal] = useState<number>(passedState?.totalAmount || (passedState?.currentTrip?.price * selectedSeats.length) || 0);
+    const [seatDetails, setSeatDetails] = useState<any[]>(passedState?.seatDetails || []);
 
     // Wizard active step: 1 (Info), 2 (Payment & QR), 3 (Completed Ticket)
     const [activeStep, setActiveStep] = useState<number>(1);
@@ -76,12 +79,108 @@ export const useCheckoutPage = () => {
     const baseTotalRef = useRef(baseTotal);
 
     useEffect(() => {
-        currentTripRef.current = currentTrip;
-        selectedSeatsRef.current = selectedSeats;
-        navigateRef.current = navigate;
-        createdBookingRef.current = createdBooking;
-        baseTotalRef.current = baseTotal;
-    }, [currentTrip, selectedSeats, navigate, createdBooking, baseTotal]);
+        const fetchLiveData = () => {
+            const tripId = currentTrip?.id || passedState?.currentTrip?.id;
+            if (tripId && activeStep === 1) { // Only fetch live data if in step 1
+                Promise.all([
+                    publicTripService.getTripById(tripId),
+                    publicTripService.getSeatMap(tripId).catch(() => ({ data: { result: null } } as any))
+                ]).then(async ([tripRes, seatMapRes]) => {
+                    const payload = tripRes.data.result || tripRes.data.data;
+                    const seatMapPayload = seatMapRes.data?.result || seatMapRes.data?.data;
+                    
+                    if (payload) {
+                        let newPrice = payload.prices?.[0]?.finalPrice || payload.prices?.[0]?.basePrice || payload.price || 0;
+                        let routeTiers: any[] = [];
+                        
+                        if (newPrice === 0 && payload.routeId) {
+                            try {
+                                const priceRes = await priceService.getPricingByRoute(payload.routeId);
+                                const pp = priceRes.data.result || priceRes.data.data;
+                                routeTiers = (pp as any)?.priceTiers || [];
+                                if (routeTiers.length > 0) {
+                                    newPrice = routeTiers[0].finalPrice || routeTiers[0].basePrice || routeTiers[0].minPrice || 0;
+                                }
+                            } catch (err) {
+                                console.error('Failed to fetch route pricing', err);
+                            }
+                        }
+
+                        let updatedSeatDetails = passedState?.seatDetails || [];
+                        if (updatedSeatDetails.length) {
+                            updatedSeatDetails = updatedSeatDetails.map((s: any) => {
+                                let currentSeatType = s.seatType;
+                                if (seatMapPayload && seatMapPayload.seats) {
+                                    const latestSeat = seatMapPayload.seats.find((mapSeat: any) => mapSeat.seatNumber === s.seatNumber);
+                                    if (latestSeat && latestSeat.seatType) {
+                                        currentSeatType = latestSeat.seatType;
+                                    }
+                                }
+
+                                let pPrice = newPrice; 
+                                const pe = payload.prices?.find((p: any) => p.seatType === currentSeatType) || payload.prices?.[0];
+                                if (pe) {
+                                    pPrice = pe.finalPrice || pe.basePrice;
+                                } else if (routeTiers.length > 0) {
+                                    const tier = routeTiers.find((t: any) => t.seatType === currentSeatType) || routeTiers[0];
+                                    pPrice = tier?.finalPrice || tier?.basePrice || tier?.minPrice || 0;
+                                }
+                                return { ...s, seatType: currentSeatType, price: pPrice };
+                            });
+                            const sum = updatedSeatDetails.reduce((acc: number, s: any) => acc + s.price, 0);
+                            setBaseTotal(sum);
+                            setSeatDetails(updatedSeatDetails);
+                        } else if (selectedSeats.length) {
+                            if (seatMapPayload && seatMapPayload.seats) {
+                                let sum = 0;
+                                for (const sn of selectedSeats) {
+                                    const latestSeat = seatMapPayload.seats.find((mapSeat: any) => mapSeat.seatNumber === sn);
+                                    const st = latestSeat?.seatType || 'REGULAR';
+                                    const pe = payload.prices?.find((p: any) => p.seatType === st) || payload.prices?.[0];
+                                    let pPrice = newPrice;
+                                    if (pe) {
+                                        pPrice = pe.finalPrice || pe.basePrice;
+                                    } else if (routeTiers.length > 0) {
+                                        const tier = routeTiers.find((t: any) => t.seatType === st) || routeTiers[0];
+                                        pPrice = tier?.finalPrice || tier?.basePrice || tier?.minPrice || 0;
+                                    }
+                                    sum += pPrice;
+                                }
+                                setBaseTotal(sum);
+                            } else {
+                                setBaseTotal(newPrice * selectedSeats.length);
+                            }
+                        }
+
+                        const mappedTrip = {
+                            id: payload.id,
+                            from: payload.route?.originCityName || '—',
+                            to: payload.route?.destinationCityName || '—',
+                            routeName: payload.route?.name || '',
+                            duration: payload.route?.durationMinutes ? `${Math.floor(payload.route.durationMinutes / 60)} giờ` : '',
+                            price: newPrice,
+                            vehicleType: payload.vehicle?.vehicleTypeName || '—',
+                            vehicleFullName: [payload.vehicle?.brand, payload.vehicle?.model].filter(Boolean).join(' ') || '',
+                            licensePlate: payload.vehicle?.licensePlate || '—',
+                            departureDatetime: payload.departureDatetime,
+                            arrivalDatetime: payload.arrivalDatetime,
+                            tripCode: payload.tripCode || '',
+                        };
+                        setCurrentTrip(mappedTrip);
+                    }
+                }).catch(console.error);
+            }
+        };
+
+        fetchLiveData();
+
+        const handleDataChanged = () => {
+            fetchLiveData();
+        };
+
+        window.addEventListener('public-data-changed', handleDataChanged);
+        return () => window.removeEventListener('public-data-changed', handleDataChanged);
+    }, [activeStep, passedState?.currentTrip?.id, selectedSeats]);
 
     // Pre-fill user data
     useEffect(() => {
@@ -274,11 +373,17 @@ export const useCheckoutPage = () => {
             customerPhone: phoneNumber.trim(),
             customerEmail: email.trim(),
             totalAmount: Math.max(0, baseTotal - appliedDiscount),
-            seats: (passedState as any)?.seatDetails?.map((s: any) => ({
-                seatId: s.seatId,
-                seatNumber: s.seatNumber,
-                price: s.price
-            })) || []
+            seats: seatDetails.length > 0 
+                ? seatDetails.map((s: any) => ({
+                    seatId: s.seatId,
+                    seatNumber: s.seatNumber,
+                    price: s.price
+                })) 
+                : selectedSeats.map((s: string) => ({
+                    seatId: null,
+                    seatNumber: s,
+                    price: baseTotal / (selectedSeats.length || 1)
+                }))
         };
 
         try {
@@ -404,6 +509,7 @@ export const useCheckoutPage = () => {
         passedState,
         currentTrip,
         selectedSeats,
+        seatDetails,
         baseTotal,
         fullName,
         setFullName,

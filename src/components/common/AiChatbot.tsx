@@ -175,7 +175,22 @@ const AiChatbot: React.FC = () => {
         toast.success('Đã xóa giá theo mùa thành công!', { id: 'aiAction' });
       }
       // === VEHICLE SERVICE ===
-      else if (parsed.action === 'UPDATE_VEHICLE_STATUS') {
+      else if (parsed.action === 'CREATE_VEHICLE') {
+        toast.loading('Đang tạo xe...', { id: 'aiAction' });
+        await vehicleService.createVehicle({
+          licensePlate: parsed.licensePlate, vehicleTypeId: parsed.vehicleTypeId,
+          color: parsed.color, manufacturer: parsed.manufacturer, model: parsed.model,
+          yearOfManufacture: parsed.yearOfManufacture
+        } as any);
+        toast.success('Đã tạo xe thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'UPDATE_VEHICLE') {
+        toast.loading('Đang cập nhật xe...', { id: 'aiAction' });
+        await vehicleService.updateVehicle(parsed.vehicleId, {
+          licensePlate: parsed.licensePlate, color: parsed.color,
+          manufacturer: parsed.manufacturer, model: parsed.model
+        } as any);
+        toast.success('Đã cập nhật xe thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'UPDATE_VEHICLE_STATUS') {
         toast.loading('Đang đổi trạng thái xe...', { id: 'aiAction' });
         await vehicleService.updateVehicleStatus(parsed.vehicleId, { status: parsed.status } as any);
         toast.success(`Đã đổi trạng thái xe thành ${parsed.status}!`, { id: 'aiAction' });
@@ -183,6 +198,22 @@ const AiChatbot: React.FC = () => {
         toast.loading('Đang xóa xe...', { id: 'aiAction' });
         await vehicleService.deleteVehicle(parsed.vehicleId);
         toast.success('Đã xóa xe thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'CREATE_VEHICLE_TYPE') {
+        toast.loading('Đang tạo loại xe...', { id: 'aiAction' });
+        await vehicleService.createVehicleType({
+          name: parsed.name, seatCapacity: parsed.seatCapacity, description: parsed.description
+        } as any);
+        toast.success('Đã tạo loại xe thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'UPDATE_VEHICLE_TYPE') {
+        toast.loading('Đang cập nhật loại xe...', { id: 'aiAction' });
+        await vehicleService.updateVehicleType(parsed.vehicleTypeId, {
+          name: parsed.name, seatCapacity: parsed.seatCapacity, description: parsed.description
+        } as any);
+        toast.success('Đã cập nhật loại xe thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'DELETE_VEHICLE_TYPE') {
+        toast.loading('Đang xóa loại xe...', { id: 'aiAction' });
+        await vehicleService.deleteVehicleType(parsed.vehicleTypeId);
+        toast.success('Đã xóa loại xe thành công!', { id: 'aiAction' });
       }
       // === USER SERVICE ===
       else if (parsed.action === 'UPDATE_USER_STATUS') {
@@ -193,9 +224,28 @@ const AiChatbot: React.FC = () => {
         toast.loading('Đang xóa người dùng...', { id: 'aiAction' });
         await adminUserService.deleteUser(parsed.userId);
         toast.success('Đã xóa người dùng thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'SEARCH_USERS') {
+        toast.loading('Đang tìm kiếm người dùng...', { id: 'aiAction' });
+        const res = await adminUserService.searchUsers({ keyword: parsed.keyword });
+        const users = res.data.result?.content || res.data.result || [];
+        const count = Array.isArray(users) ? users.length : 0;
+        toast.success(`Tìm thấy ${count} người dùng khớp với "${parsed.keyword}"`, { id: 'aiAction' });
       }
       // === DRIVER SERVICE ===
-      else if (parsed.action === 'UPDATE_DRIVER_STATUS') {
+      else if (parsed.action === 'CREATE_DRIVER') {
+        toast.loading('Đang tạo tài xế...', { id: 'aiAction' });
+        await adminDriverService.createDriver({
+          fullName: parsed.fullName, phone: parsed.phone, email: parsed.email,
+          licenseNumber: parsed.licenseNumber, licenseClass: parsed.licenseClass
+        } as any);
+        toast.success('Đã tạo tài xế thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'UPDATE_DRIVER') {
+        toast.loading('Đang cập nhật tài xế...', { id: 'aiAction' });
+        await adminDriverService.updateDriver(parsed.driverId, {
+          fullName: parsed.fullName, phone: parsed.phone, email: parsed.email
+        } as any);
+        toast.success('Đã cập nhật tài xế thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'UPDATE_DRIVER_STATUS') {
         toast.loading('Đang cập nhật trạng thái tài xế...', { id: 'aiAction' });
         await adminDriverService.updateDriverStatus(parsed.driverId, { status: parsed.status, reason: 'AI Agent' } as any);
         toast.success(`Đã cập nhật trạng thái tài xế thành ${parsed.status}!`, { id: 'aiAction' });
@@ -203,6 +253,36 @@ const AiChatbot: React.FC = () => {
         toast.loading('Đang xóa tài xế...', { id: 'aiAction' });
         await adminDriverService.deleteDriver(parsed.driverId);
         toast.success('Đã xóa tài xế thành công!', { id: 'aiAction' });
+      }
+      // === PRICE SERVICE (Extended) ===
+      else if (parsed.action === 'UPDATE_SEASONAL_PRICE') {
+        toast.loading('Đang cập nhật giá mùa...', { id: 'aiAction' });
+        await adminPriceService.updateSeasonalPrice(parsed.seasonalPriceId, {
+          name: parsed.name, type: parsed.type, value: parsed.value,
+          startDate: parsed.startDate, endDate: parsed.endDate
+        });
+        toast.success('Đã cập nhật giá theo mùa thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'CREATE_SURCHARGE') {
+        toast.loading('Đang tạo phụ phí...', { id: 'aiAction' });
+        await adminPriceService.createSurcharge({
+          name: parsed.name, type: parsed.type, value: parsed.value,
+          startDate: parsed.startDate, endDate: parsed.endDate
+        });
+        toast.success('Đã tạo phụ phí thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'DELETE_SURCHARGE') {
+        toast.loading('Đang xóa phụ phí...', { id: 'aiAction' });
+        await adminPriceService.deleteSurcharge(parsed.surchargeId);
+        toast.success('Đã xóa phụ phí thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'CREATE_PRICING_RULE') {
+        toast.loading('Đang tạo quy tắc giá...', { id: 'aiAction' });
+        await adminPriceService.createPricingRule({
+          name: parsed.name, type: parsed.type, value: parsed.value, conditions: parsed.conditions
+        });
+        toast.success('Đã tạo quy tắc giá thành công!', { id: 'aiAction' });
+      } else if (parsed.action === 'DELETE_PRICING_RULE') {
+        toast.loading('Đang xóa quy tắc giá...', { id: 'aiAction' });
+        await adminPriceService.deletePricingRule(parsed.pricingRuleId);
+        toast.success('Đã xóa quy tắc giá thành công!', { id: 'aiAction' });
       } else {
         toast.error(`Hành động "${parsed.action}" chưa được hỗ trợ.`, { id: 'aiAction' });
       }
@@ -210,6 +290,7 @@ const AiChatbot: React.FC = () => {
       // Xóa toàn bộ cache frontend sau khi AI thực thi lệnh
       // Lần tới khi Admin chuyển trang hoặc refresh table, data mới sẽ được gọi.
       apiCache.clearAll();
+      window.dispatchEvent(new Event('admin-data-changed'));
 
     } catch (err: any) {
       console.error('Error executing AI action:', err);
@@ -359,6 +440,25 @@ const AiChatbot: React.FC = () => {
 
                                 {parsed.userId && <div><span className="font-semibold">Mã Khách Hàng:</span> {parsed.userId}</div>}
                                 {parsed.driverId && <div><span className="font-semibold">Mã Tài Xế/Phụ Xe:</span> {parsed.driverId}</div>}
+                                
+                                {parsed.licensePlate && <div><span className="font-semibold">Biển số:</span> {parsed.licensePlate}</div>}
+                                {parsed.color && <div><span className="font-semibold">Màu sắc:</span> {parsed.color}</div>}
+                                {parsed.manufacturer && <div><span className="font-semibold">Hãng xe:</span> {parsed.manufacturer}</div>}
+                                {parsed.model && <div><span className="font-semibold">Model:</span> {parsed.model}</div>}
+                                {parsed.yearOfManufacture && <div><span className="font-semibold">Năm SX:</span> {parsed.yearOfManufacture}</div>}
+                                {parsed.seatCapacity && <div><span className="font-semibold">Số ghế:</span> {parsed.seatCapacity}</div>}
+                                {parsed.description && <div><span className="font-semibold">Mô tả:</span> {parsed.description}</div>}
+                                
+                                {parsed.fullName && <div><span className="font-semibold">Họ tên:</span> {parsed.fullName}</div>}
+                                {parsed.phone && <div><span className="font-semibold">SĐT:</span> {parsed.phone}</div>}
+                                {parsed.email && <div><span className="font-semibold">Email:</span> {parsed.email}</div>}
+                                {parsed.licenseNumber && <div><span className="font-semibold">Số bằng lái:</span> {parsed.licenseNumber}</div>}
+                                {parsed.licenseClass && <div><span className="font-semibold">Hạng bằng:</span> {parsed.licenseClass}</div>}
+                                
+                                {parsed.surchargeId && <div><span className="font-semibold">Mã Phụ phí:</span> {parsed.surchargeId}</div>}
+                                {parsed.pricingRuleId && <div><span className="font-semibold">Mã Quy tắc:</span> {parsed.pricingRuleId}</div>}
+                                {parsed.conditions && <div><span className="font-semibold">Điều kiện:</span> {parsed.conditions}</div>}
+                                {parsed.keyword && <div><span className="font-semibold">Từ khóa:</span> {parsed.keyword}</div>}
                                 
                                 {parsed.status && <div><span className="font-semibold">Trạng thái mới:</span> {parsed.status}</div>}
                                 {parsed.isActive !== undefined && <div><span className="font-semibold">Mở bán:</span> {parsed.isActive ? 'Có' : 'Không'}</div>}

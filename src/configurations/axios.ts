@@ -91,7 +91,11 @@ const setupInterceptors = (instance: typeof axiosInstance) => {
             failedQueue.push({ resolve, reject });
           })
             .then((token) => {
-              original.headers.Authorization = 'Bearer ' + token;
+              if (original.headers && typeof original.headers.set === 'function') {
+                original.headers.set('Authorization', 'Bearer ' + token);
+              } else {
+                original.headers.Authorization = 'Bearer ' + token;
+              }
               return instance(original);
             })
             .catch((err) => {
@@ -106,7 +110,11 @@ const setupInterceptors = (instance: typeof axiosInstance) => {
             .then((res) => {
               const { accessToken, refreshToken: newRefresh } = res.data.result;
               cookieUtils.setTokens(accessToken, newRefresh);
-              original.headers.Authorization = `Bearer ${accessToken}`;
+              if (original.headers && typeof original.headers.set === 'function') {
+                original.headers.set('Authorization', `Bearer ${accessToken}`);
+              } else {
+                original.headers.Authorization = `Bearer ${accessToken}`;
+              }
               processQueue(null, accessToken);
               resolve(instance(original));
             })
@@ -116,7 +124,13 @@ const setupInterceptors = (instance: typeof axiosInstance) => {
               // On refresh failure, retry GET requests without auth (public endpoint fallback)
               if (original.method?.toLowerCase() === 'get' && !original._retryWithoutAuth) {
                 original._retryWithoutAuth = true;
-                delete original.headers.Authorization;
+                if (original.headers && typeof original.headers.delete === 'function') {
+                  original.headers.delete('Authorization');
+                  original.headers.delete('authorization');
+                } else {
+                  delete original.headers.Authorization;
+                  delete original.headers.authorization;
+                }
                 resolve(instance(original));
               } else {
                 if (window.location.pathname !== '/login') {
