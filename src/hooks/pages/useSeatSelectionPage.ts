@@ -78,8 +78,12 @@ export const useSeatSelectionPage = () => {
 
   useEffect(() => {
     if (!id) return;
+    let isInitialLoad = true;
+
     const fetchSeatMap = async () => {
-      setLoadingSeats(true);
+      if (isInitialLoad) {
+        setLoadingSeats(true);
+      }
       try {
         const res = await publicTripService.getSeatMap(id);
         const payload = res.data.result || res.data.data;
@@ -96,16 +100,27 @@ export const useSeatSelectionPage = () => {
       } catch (error) {
         console.error("Failed to fetch seat map", error);
       } finally {
-        setLoadingSeats(false);
+        if (isInitialLoad) {
+          setLoadingSeats(false);
+          isInitialLoad = false;
+        }
       }
     };
+
     fetchSeatMap();
 
+    // Background polling every 4 seconds to catch real-time seat locks
+    const intervalId = setInterval(fetchSeatMap, 4000);
+
     const handleDataChanged = () => {
-        if (id) fetchSeatMap();
+        fetchSeatMap();
     };
     window.addEventListener('public-data-changed', handleDataChanged);
-    return () => window.removeEventListener('public-data-changed', handleDataChanged);
+
+    return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('public-data-changed', handleDataChanged);
+    };
   }, [id]);
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -132,9 +147,19 @@ export const useSeatSelectionPage = () => {
       return;
     }
     const price = ct?.price || 0;
+    const details = selectedSeats.map(seatNum => {
+      const match = seatMap.find(s => s.seatNumber === seatNum);
+      return {
+        seatId: match?.seatId || '',
+        seatNumber: seatNum,
+        price: price
+      };
+    });
+
     navigate(`/tuyen-duong/${ct?.id || id}/thanh-toan`, {
       state: {
         selectedSeats,
+        seatDetails: details,
         currentTrip: ct,
         totalAmount: price * selectedSeats.length
       }

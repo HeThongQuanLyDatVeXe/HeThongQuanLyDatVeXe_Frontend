@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Link as LinkIcon } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import { aiService } from '../../services/route-service/aiService';
 import { Link } from 'react-router-dom';
 
@@ -59,7 +59,7 @@ const AiChatbot: React.FC = () => {
         toast.success('Đã xóa tuyến đường thành công!', { id: 'aiAction' });
       } else if (parsed.action === 'UPDATE_ROUTE_STATUS') {
         toast.loading('Đang cập nhật trạng thái tuyến...', { id: 'aiAction' });
-        await adminRouteService.updateRouteStatus(parsed.routeId, { isActive: parsed.isActive });
+        await adminRouteService.updateRouteStatus(parsed.routeId, { status: parsed.isActive ? 'ACTIVE' : 'INACTIVE' } as any);
         toast.success('Đã cập nhật trạng thái tuyến đường thành công!', { id: 'aiAction' });
       } else if (parsed.action === 'CREATE_CITY') {
         toast.loading('Đang tạo thành phố...', { id: 'aiAction' });

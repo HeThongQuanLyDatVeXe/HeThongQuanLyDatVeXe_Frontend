@@ -33,15 +33,8 @@ export const publicTripService = {
   },
 
   getSeatMap(id: string) {
-    // Short cache — seat maps can change but not every second
-    const cacheKey = `${TRIP_PUBLIC_BASE}/${id}/seat-map`;
-    const cached = apiCache.get<ApiResponse<SeatMapResponse>>(cacheKey);
-    if (cached) return Promise.resolve({ data: cached } as any);
-
-    return axiosInstance.get<ApiResponse<SeatMapResponse>>(`${TRIP_PUBLIC_BASE}/${id}/seat-map`).then(res => {
-      apiCache.set(cacheKey, res.data, CacheTTL.SHORT);
-      return res;
-    });
+    // Don't cache — seat map updates dynamically in real-time
+    return axiosInstance.get<ApiResponse<SeatMapResponse>>(`${TRIP_PUBLIC_BASE}/${id}/seat-map`);
   },
 
   getTripsByRoute(routeId: string, page = 0, size = 10) {

@@ -40,14 +40,11 @@ export const useRouteTripsPage = () => {
     const handleDataChanged = () => {
       if (routeId) {
         loadData();
-        if (selectedTripId) {
-          fetchSeatMapForTrip(selectedTripId);
-        }
       }
     };
     window.addEventListener('public-data-changed', handleDataChanged);
     return () => window.removeEventListener('public-data-changed', handleDataChanged);
-  }, [routeId, selectedTripId]);
+  }, [routeId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -150,20 +147,41 @@ export const useRouteTripsPage = () => {
   }, [trips, dateFilter, vehicleTypeFilter, onlyAvailable, timeFilter, sortBy]);
 
 
-  const fetchSeatMapForTrip = async (tripId: string) => {
-    setSeatMapLoading(true);
-    try {
-      const res = await publicTripService.getSeatMap(tripId);
-      setSeatMap(res.data.result || res.data.data as SeatMapResponse);
-    } catch {
+  // Polling for selected trip seat map every 2 seconds
+  useEffect(() => {
+    if (!selectedTripId) {
       setSeatMap(null);
-      showError('Không thể tải sơ đồ ghế');
-    } finally {
-      setSeatMapLoading(false);
+      return;
     }
-  };
 
-  const handleSelectTrip = async (tripId: string) => {
+    let isInitial = true;
+    const fetchMap = async () => {
+      if (isInitial) {
+        setSeatMapLoading(true);
+      }
+      try {
+        const res = await publicTripService.getSeatMap(selectedTripId);
+        setSeatMap(res.data.result || res.data.data as SeatMapResponse);
+      } catch (err) {
+        console.error("Failed to poll seat map for trip", err);
+      } finally {
+        if (isInitial) {
+          setSeatMapLoading(false);
+          isInitial = false;
+        }
+      }
+    };
+
+    fetchMap();
+
+    const intervalId = setInterval(fetchMap, 2000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [selectedTripId]);
+
+  const handleSelectTrip = (tripId: string) => {
     if (selectedTripId === tripId) {
       setSelectedTripId(null);
       setSeatMap(null);
@@ -172,7 +190,6 @@ export const useRouteTripsPage = () => {
     }
     setSelectedTripId(tripId);
     setSelectedSeats([]);
-    await fetchSeatMapForTrip(tripId);
   };
 
   const toggleSeat = (seatNumber: string) => {

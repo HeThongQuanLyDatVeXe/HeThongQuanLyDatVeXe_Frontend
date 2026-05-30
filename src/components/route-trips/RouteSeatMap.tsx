@@ -14,7 +14,7 @@ interface RouteSeatMapProps {
 
 export const RouteSeatMap: React.FC<RouteSeatMapProps> = ({
     seatMapLoading, seatMap, selectedSeats, toggleSeat, selectedTrip,
-    fmtPrice, calculateTotal, navigate, route
+    fmtPrice, calculateTotal, navigate, route: _route
 }) => {
     return (
         <div className="border-t border-outline/20 bg-surface-container-low p-5">
@@ -80,7 +80,7 @@ export const RouteSeatMap: React.FC<RouteSeatMapProps> = ({
                                                         const isAvailable = seat.status === 'AVAILABLE';
                                                         const isChosen = selectedSeats.includes(seat.seatNumber);
                                                         const isBooked = seat.status === 'BOOKED';
-                                                        const isHeld = seat.status === 'HELD';
+                                                        const isHeld = seat.status === 'HELD' || seat.status === 'LOCKED';
 
                                                         const getSeatTypeName = (type?: string) => {
                                                             if (!type) return '';
@@ -150,22 +150,18 @@ export const RouteSeatMap: React.FC<RouteSeatMapProps> = ({
                                             const si = seatMap!.seats.find((s: any) => s.seatNumber === sn);
                                             const st = si?.seatType || 'REGULAR';
                                             const pe = selectedTrip?.prices?.find((p: any) => p.seatType === st) || selectedTrip?.prices?.[0];
-                                            return { seatNumber: sn, seatType: st, price: pe?.finalPrice || pe?.basePrice || 0 };
+                                            return { 
+                                                seatId: si?.seatId,
+                                                seatNumber: sn, 
+                                                seatType: st, 
+                                                price: pe?.finalPrice || pe?.basePrice || 0 
+                                            };
                                         });
-                                        navigate(`/dat-ve/${selectedTrip.id}`, {
+                                        navigate(`/tuyen-duong/${selectedTrip.id}/thanh-toan`, {
                                             state: {
                                                 selectedSeats,
                                                 seatDetails,
-                                                trip: {
-                                                    id: selectedTrip!.id,
-                                                    from: route.originCityName,
-                                                    to: route.destinationCityName,
-                                                    vehicleType: selectedTrip!.vehicle?.vehicleTypeName || '',
-                                                    licensePlate: selectedTrip!.vehicle?.licensePlate || '',
-                                                    departureDatetime: selectedTrip!.departureDatetime,
-                                                    arrivalDatetime: selectedTrip!.arrivalDatetime,
-                                                    tripCode: selectedTrip!.tripCode || '',
-                                                },
+                                                currentTrip: selectedTrip,
                                                 totalAmount: calculateTotal(),
                                             }
                                         });

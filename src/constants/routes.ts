@@ -18,6 +18,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   CHANGE_PASSWORD: '/profile/change-password',
   MY_BOOKINGS: '/my-bookings',
+  CHANGE_CANCEL: '/my-bookings/:bookingCode/change-cancel',
 
   ADMIN_LOGIN: '/admin/login',
   ADMIN_DASHBOARD: '/admin',

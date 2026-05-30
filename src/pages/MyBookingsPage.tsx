@@ -19,7 +19,13 @@ export const MyBookingsPage: React.FC = () => {
         handleNavigateProfile,
         TABS,
         SIDEBAR_NAV,
-        MOCK_BOOKINGS
+        MOCK_BOOKINGS,
+        loading,
+        showPaymentModal,
+        paymentUrl,
+        activeBookingForPayment,
+        handlePayNow,
+        handleClosePaymentModal
     } = useMyBookingsPage();
 
     return (
@@ -35,7 +41,7 @@ export const MyBookingsPage: React.FC = () => {
                 />
 
                 {/* ── Main Content ── */}
-                <section className="col-span-1 md:col-span-9 flex flex-col gap-8">
+                <section className="col-span-1 md:col-span-9 flex flex-col gap-8 text-left">
                     {/* Page heading */}
                     <header className="flex flex-col gap-1">
                         <h1
@@ -66,7 +72,7 @@ export const MyBookingsPage: React.FC = () => {
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className="pb-3 text-sm font-medium whitespace-nowrap transition-all border-b-2"
+                                className="pb-3 text-sm font-medium whitespace-nowrap transition-all border-b-2 cursor-pointer"
                                 style={
                                     activeTab === key
                                         ? { borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontWeight: 700 }
@@ -92,9 +98,13 @@ export const MyBookingsPage: React.FC = () => {
 
                     {/* ── Booking cards ── */}
                     <div className="flex flex-col gap-5">
-                        {filteredBookings.length > 0 ? (
+                        {loading ? (
+                            <div className="flex justify-center py-12">
+                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : filteredBookings.length > 0 ? (
                             filteredBookings.map((booking) => (
-                                <BookingCard key={booking.id} booking={booking} />
+                                <BookingCard key={booking.id} booking={booking} onPayNow={handlePayNow} />
                             ))
                         ) : (
                             /* Empty state */
@@ -111,6 +121,108 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                 </section>
             </main>
+
+            {/* PayOS Embedded Payment Modal for Pay Later */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1e1512]/60 backdrop-blur-md p-4 animate-fade-in animate-none">
+                    <div className="bg-gradient-to-b from-white to-[#fffbfa]/95 backdrop-blur-md rounded-3xl border border-orange-100/50 shadow-[0_24px_60px_-15px_rgba(38,24,19,0.18)] max-w-[520px] w-full overflow-hidden flex flex-col relative animate-fade-in-up animate-none">
+                        
+                        {/* Modal Header */}
+                        <div className="px-8 py-5 border-b border-orange-100/30 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-[#c84d04] flex items-center justify-center text-white shadow-md shadow-orange-500/10">
+                                    <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="font-bold text-base text-[#261813] tracking-tight">Thanh toán vé xe</h3>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Cổng thanh toán bảo mật PayOS</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={handleClosePaymentModal}
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-orange-50 hover:text-primary transition-all duration-200 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-6 space-y-6 flex-grow overflow-y-auto max-h-[75vh]">
+                            
+                            {/* Premium Ticket Card Summary */}
+                            <div className="bg-gradient-to-r from-amber-500 to-[#c84d04] rounded-2xl p-5 text-white shadow-lg shadow-orange-500/15 relative overflow-hidden text-left">
+                                {/* Decorative ticket cutouts */}
+                                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 backdrop-blur-sm" />
+                                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 backdrop-blur-sm" />
+                                
+                                <div className="flex justify-between items-start mb-3 relative z-10">
+                                    <div>
+                                        <p className="text-[9px] text-white/70 uppercase tracking-widest font-semibold">Mã đặt vé</p>
+                                        <p className="font-mono text-sm font-bold tracking-wider bg-white/20 px-2 py-0.5 rounded-md mt-1 backdrop-blur-xs inline-block">
+                                            {activeBookingForPayment?.bookingCode}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] text-white/70 uppercase tracking-widest font-semibold">Hành khách</p>
+                                        <p className="font-bold text-sm mt-1 truncate max-w-[160px]">{activeBookingForPayment?.customerName}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="border-t border-white/20 my-3 border-dashed relative z-10" />
+                                
+                                <div className="flex justify-between items-end relative z-10">
+                                    <div>
+                                        <p className="text-[9px] text-white/70 uppercase tracking-widest font-semibold">Hình thức</p>
+                                        <div className="flex items-center gap-1.5 mt-1 bg-white/15 px-2.5 py-1 rounded-full text-[10px] font-semibold backdrop-blur-xs">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                            Quét mã QR liên ngân hàng
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] text-white/70 uppercase tracking-widest font-semibold">Số tiền thanh toán</p>
+                                        <p className="text-xl font-extrabold tracking-tight mt-0.5 text-yellow-300 drop-shadow-xs">
+                                            10.000₫
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Embedded container where PayOS Checkout SDK renders the iframe */}
+                            <div id="embedded-payment-container" className="relative w-full h-[400px] bg-slate-50/80 border border-slate-100 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                                <div className="loading-spinner-wrapper flex flex-col items-center gap-3 text-slate-400">
+                                    <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-xs font-medium tracking-wide">Đang kết nối cổng thanh toán PayOS...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer with security trust badges */}
+                        <div className="px-8 py-4 bg-[#fffbff]/70 border-t border-orange-100/30 flex justify-between items-center gap-3">
+                            <p className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm text-emerald-500" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+                                Bảo mật 256-bit SSL
+                            </p>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => {
+                                        if (paymentUrl) window.location.href = paymentUrl;
+                                    }}
+                                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all duration-200 hover:border-slate-300 flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                    Mở trang mới
+                                </button>
+                                <button 
+                                    onClick={handleClosePaymentModal}
+                                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-[#c84d04] hover:from-amber-600 hover:to-[#b04303] text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-orange-500/10 hover:shadow-lg flex items-center gap-1 cursor-pointer"
+                                >
+                                    Đóng &amp; Thanh toán sau
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </div>

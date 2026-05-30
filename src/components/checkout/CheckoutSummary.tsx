@@ -11,6 +11,7 @@ interface CheckoutSummaryProps {
     appliedDiscount: number;
     handleCheckout: (e?: React.FormEvent) => void;
     isProcessing: boolean;
+    buttonText?: string;
 }
 
 export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
@@ -23,8 +24,14 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     promoMessage,
     appliedDiscount,
     handleCheckout,
-    isProcessing
+    isProcessing,
+    buttonText
 }) => {
+    const fromCity = currentTrip?.from || currentTrip?.route?.originCityName || '—';
+    const toCity = currentTrip?.to || currentTrip?.route?.destinationCityName || '—';
+    const vehType = currentTrip?.vehicleType || currentTrip?.vehicle?.vehicleTypeName || 'Giường nằm';
+    const tripPrice = currentTrip?.price ?? (currentTrip?.prices?.[0]?.finalPrice ?? currentTrip?.prices?.[0]?.basePrice ?? 200000);
+
     return (
         <div className="sticky top-[120px] bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-[0_12px_32px_rgba(92,64,51,0.1)] relative overflow-hidden flex flex-col h-full text-left">
             <h3 className="text-lg font-bold text-on-surface mb-6 border-b border-outline-variant pb-4 border-dashed relative z-10" style={{ fontFamily: 'Playfair Display, serif' }}>
@@ -35,13 +42,13 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                 {/* Route details */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.from}</span>
+                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{fromCity}</span>
                         <span className="material-symbols-outlined text-outline text-[18px]">arrow_right_alt</span>
-                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{currentTrip.to}</span>
+                        <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase">{toCity}</span>
                     </div>
-                    <div className="text-base font-semibold text-on-surface">{currentTrip.vehicleType}</div>
+                    <div className="text-base font-semibold text-on-surface">{vehType}</div>
                     
-                    {currentTrip.departureDatetime && (
+                    {currentTrip?.departureDatetime && (
                         <div className="text-sm text-on-surface-variant mt-2 flex items-center gap-2">
                             <span className="material-symbols-outlined text-[16px]">schedule</span>
                             <span>{new Date(currentTrip.departureDatetime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
@@ -89,7 +96,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                 {/* Price breakdown */}
                 <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm text-on-surface-variant">
-                        <span>Giá vé ({selectedSeats.length} x {currentTrip.price.toLocaleString()}đ)</span>
+                        <span>Giá vé ({selectedSeats.length} x {tripPrice.toLocaleString()}đ)</span>
                         <span>{baseTotal.toLocaleString()}đ</span>
                     </div>
                     <div className="flex justify-between items-center text-sm text-on-surface-variant">
@@ -107,7 +114,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                 <div className="border-t border-outline-variant mt-4 pt-4">
                     <div className="flex justify-between items-end">
                         <span className="text-base text-on-surface font-semibold">Tổng tiền</span>
-                        <span className="text-xl font-bold text-primary">
+                        <span className="text-xl font-bold text-[#F4600C]">
                             {Math.max(0, baseTotal - appliedDiscount).toLocaleString()}đ
                         </span>
                     </div>
@@ -127,11 +134,11 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Đang thanh toán...
+                        Đang xử lý...
                     </>
                 ) : (
                     <>
-                        Xác nhận & Thanh toán
+                        {buttonText || 'Xác nhận & Thanh toán'}
                         <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </>
                 )}

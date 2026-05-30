@@ -19,6 +19,7 @@ const RegisterPage = React.lazy(() => import('../pages/RegisterPage').then(m => 
 const ForgotPasswordPage = React.lazy(() => import('../pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ProfilePage = React.lazy(() => import('../pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const MyBookingsPage = React.lazy(() => import('../pages/MyBookingsPage').then(m => ({ default: m.MyBookingsPage })));
+const ChangeCancelTicketPage = React.lazy(() => import('../pages/ChangeCancelTicketPage').then(m => ({ default: m.ChangeCancelTicketPage })));
 const GoogleCallbackPage = React.lazy(() => import('../pages/GoogleCallbackPage').then(m => ({ default: m.GoogleCallbackPage })));
 const AdminLoginPage = React.lazy(() => import('../pages/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })));
 const AdminDashboard = React.lazy(() => import('../pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -139,6 +140,15 @@ export const AppRouter: React.FC = () => {
                         element={(
                             <ProtectedRoute>
                                 <MyBookingsPage />
+                            </ProtectedRoute>
+                        )}
+                    />
+
+                    <Route
+                        path={ROUTES.CHANGE_CANCEL}
+                        element={(
+                            <ProtectedRoute>
+                                <ChangeCancelTicketPage />
                             </ProtectedRoute>
                         )}
                     />

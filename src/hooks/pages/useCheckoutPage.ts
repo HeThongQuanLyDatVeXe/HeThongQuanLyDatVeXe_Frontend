@@ -1,36 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { usePayOS } from '@payos/payos-checkout';
 import { ROUTES } from '../../constants/routes';
-import { publicTripService } from '../../services/trip-service/publicTripService';
-import { priceService } from '../../services/price-service/priceService';
+import { useAuth } from '../../hooks/user-service/useAuth';
+import { bookingService } from '../../services/booking-service/bookingService';
+import { paymentService } from '../../services/payment-service/paymentService';
 
 export interface CheckoutState {
     selectedSeats: string[];
     currentTrip: any;
     totalAmount: number;
+    seatDetails?: any[];
 }
 
 export const useCheckoutPage = () => {
-    // Removed unused id
     const navigate = useNavigate();
     const location = useLocation();
+    const { user, isAuthenticated } = useAuth();
 
     // Recover details from route state
     const passedState = location.state as CheckoutState | null;
 
-    // Use local state for live data
-    const [currentTrip, setCurrentTrip] = useState<any>(passedState?.currentTrip || null);
+    const currentTrip = passedState?.currentTrip;
     const selectedSeats = passedState?.selectedSeats || [];
-    const [baseTotal, setBaseTotal] = useState<number>(
-        passedState?.totalAmount || (currentTrip?.price * selectedSeats.length) || 0
-    );
+    const baseTotal = passedState?.totalAmount || (currentTrip?.price * selectedSeats.length) || 0;
+
+    // Wizard active step: 1 (Info), 2 (Payment & QR), 3 (Completed Ticket)
+    const [activeStep, setActiveStep] = useState<number>(1);
 
     // Form inputs state
     const [fullName, setFullName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [email, setEmail] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'momo' | 'vnpay' | 'card'>('momo');
+    const [paymentMethod, setPaymentMethod] = useState<'momo' | 'vnpay' | 'card'>('card');
 
     // Form errors state
     const [formErrors, setFormErrors] = useState<{ fullName?: string; phoneNumber?: string }>({});
@@ -42,88 +45,188 @@ export const useCheckoutPage = () => {
 
     // Submission states
     const [isProcessing, setIsProcessing] = useState(false);
+    const [paymentUrl, setPaymentUrl] = useState('');
+    const [paymentError, setPaymentError] = useState<string | null>(null);
 
-    // Scroll to top and fetch latest trip data
+    // Stable cache key based on trip ID and selected seats
+    const bookingCacheKey = currentTrip?.id && selectedSeats.length > 0
+        ? `active_booking_${currentTrip.id}_${[...selectedSeats].sort().join('_')}`
+        : null;
+
+    // Load createdBooking from sessionStorage
+    const [createdBooking, setCreatedBooking] = useState<any>(() => {
+        if (bookingCacheKey) {
+            const cached = window.sessionStorage.getItem(bookingCacheKey);
+            if (cached) {
+                try {
+                    return JSON.parse(cached);
+                } catch (e) {
+                    console.error("Failed to parse cached booking", e);
+                }
+            }
+        }
+        return null;
+    });
+
+    const latestBookingRef = useRef<any>(null);
+    const currentTripRef = useRef(currentTrip);
+    const selectedSeatsRef = useRef(selectedSeats);
+    const navigateRef = useRef(navigate);
+    const createdBookingRef = useRef(createdBooking);
+    const baseTotalRef = useRef(baseTotal);
+
+    useEffect(() => {
+        currentTripRef.current = currentTrip;
+        selectedSeatsRef.current = selectedSeats;
+        navigateRef.current = navigate;
+        createdBookingRef.current = createdBooking;
+        baseTotalRef.current = baseTotal;
+    }, [currentTrip, selectedSeats, navigate, createdBooking, baseTotal]);
+
+    // Pre-fill user data
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            setFullName(user.fullName || '');
+            setPhoneNumber(user.phoneNumber || '');
+            setEmail(user.email || '');
+        }
+    }, [isAuthenticated, user]);
+
+    // Scroll to top
     useEffect(() => {
         window.scrollTo(0, 0);
-        
-        const fetchLiveData = () => {
-            const tripId = passedState?.currentTrip?.id;
-            if (tripId) {
-                Promise.all([
-                    publicTripService.getTripById(tripId),
-                    publicTripService.getSeatMap(tripId).catch(() => ({ data: { result: null } }))
-                ]).then(async ([tripRes, seatMapRes]) => {
-                    const payload = tripRes.data.result || tripRes.data.data;
-                const seatMapPayload = seatMapRes.data?.result || seatMapRes.data?.data;
-                if (payload) {
-                    let newPrice = payload.prices?.[0]?.finalPrice || payload.prices?.[0]?.basePrice || payload.price || 0;
-                    
-                    let routeTiers: any[] = [];
-                    // Fallback to route-level pricing if trip has no specific prices
-                    if (newPrice === 0 && payload.routeId) {
-                        try {
-                            const priceRes = await priceService.getPricingByRoute(payload.routeId);
-                            const pp = priceRes.data.result || priceRes.data.data;
-                            routeTiers = (pp as any)?.priceTiers || [];
-                            if (routeTiers.length > 0) {
-                                newPrice = routeTiers[0].finalPrice || routeTiers[0].basePrice || routeTiers[0].minPrice || 0;
-                            }
-                        } catch (err) {
-                            console.error('Failed to fetch route pricing', err);
-                        }
-                    }
+    }, []);
 
-                    const mappedTrip = {
-                        id: payload.id,
-                        from: payload.route?.originCityName || '—',
-                        to: payload.route?.destinationCityName || '—',
-                        routeName: payload.route?.name || '',
-                        duration: payload.route?.durationMinutes ? `${Math.floor(payload.route.durationMinutes / 60)} giờ` : '',
-                        price: newPrice,
-                        vehicleType: payload.vehicle?.vehicleTypeName || '—',
-                        vehicleFullName: [payload.vehicle?.brand, payload.vehicle?.model].filter(Boolean).join(' ') || '',
-                        licensePlate: payload.vehicle?.licensePlate || '—',
-                        departureDatetime: payload.departureDatetime,
-                        arrivalDatetime: payload.arrivalDatetime,
-                        tripCode: payload.tripCode || '',
-                    };
-                    setCurrentTrip(mappedTrip);
-                    
-                    if (selectedSeats.length > 0) {
-                        if (seatMapPayload && seatMapPayload.seats) {
-                            let sum = 0;
-                            for (const sn of selectedSeats) {
-                                const latestSeat = seatMapPayload.seats.find((mapSeat: any) => mapSeat.seatNumber === sn);
-                                const st = latestSeat?.seatType || 'REGULAR';
-                                const pe = payload.prices?.find((p: any) => p.seatType === st) || payload.prices?.[0];
-                                let pPrice = newPrice;
-                                if (pe) {
-                                    pPrice = pe.finalPrice || pe.basePrice;
-                                } else if (routeTiers.length > 0) {
-                                    const tier = routeTiers.find((t: any) => t.seatType === st) || routeTiers[0];
-                                    pPrice = tier?.finalPrice || tier?.basePrice || tier?.minPrice || 0;
-                                }
-                                sum += pPrice;
+    // ── Verify cached booking state on mount ──────────────────────────────────
+    useEffect(() => {
+        const verifyCachedBooking = async () => {
+            if (createdBooking) {
+                try {
+                    const checkRes = await bookingService.getBookingByCode(createdBooking.bookingCode);
+                    const latestBooking = checkRes.data.result || checkRes.data.data;
+                    if (latestBooking) {
+                        if (latestBooking.bookingStatus === 'CANCELLED' || latestBooking.bookingStatus === 'EXPIRED') {
+                            console.log("Cached booking has been cancelled/expired on backend. Resetting flow to Step 1.");
+                            if (bookingCacheKey) {
+                                window.sessionStorage.removeItem(bookingCacheKey);
                             }
-                            setBaseTotal(sum);
+                            setCreatedBooking(null);
+                            setActiveStep(1);
+                        } else if (latestBooking.paymentStatus === 'PAID' || latestBooking.bookingStatus === 'CONFIRMED') {
+                            console.log("Cached booking is already PAID. Directing to Step 3.");
+                            latestBookingRef.current = latestBooking;
+                            setCreatedBooking(latestBooking);
+                            setActiveStep(3);
                         } else {
-                            setBaseTotal(newPrice * selectedSeats.length);
+                            console.log("Cached booking is unpaid and valid. Restoring Step 2.");
+                            setCreatedBooking(latestBooking);
+                            setActiveStep(2);
                         }
                     }
+                } catch (err) {
+                    console.error("Checking cached booking on mount failed. Defaulting to Step 2.", err);
+                    setActiveStep(2);
                 }
-            }).catch(console.error);
+            } else {
+                setActiveStep(1);
             }
         };
+        verifyCachedBooking();
+    }, []);
 
-        fetchLiveData();
+    // ── PayOS Checkout Hook State and Integration ──────────────────────────
+    const [payOSConfig, setPayOSConfig] = useState<any>({
+        RETURN_URL: window.location.origin,
+        ELEMENT_ID: "embedded-payment-container",
+        CHECKOUT_URL: null,
+        embedded: true,
+        onSuccess: async (event: any) => {
+            console.log("PayOS onSuccess event:", event);
+            const booking = createdBookingRef.current;
+            if (!booking) return;
+            setPaymentError(null);
+            try {
+                setIsProcessing(true);
+                // Await confirmPaymentSuccess (POST /api/payments/success)
+                await paymentService.confirmPaymentSuccess(
+                    booking.id,
+                    event.paymentLinkId || 'txn-ref'
+                );
 
-        const handleDataChanged = () => {
-            fetchLiveData();
+                // Await confirmBooking (POST /api/bookings/confirm)
+                await bookingService.confirmBooking(booking.id, {
+                    transactionRef: event.paymentLinkId || 'txn-ref',
+                    provider: 'PAYOS'
+                });
+                console.log("Backend confirm OK.");
+
+                // Instantly fetch booking state
+                const checkRes = await bookingService.getBookingByCode(booking.bookingCode);
+                const latestBooking = checkRes.data.result || checkRes.data.data;
+                if (latestBooking) {
+                    latestBookingRef.current = latestBooking;
+                    setCreatedBooking(latestBooking);
+
+                    // Clear session storage cache
+                    if (bookingCacheKey) {
+                        window.sessionStorage.removeItem(bookingCacheKey);
+                    }
+
+                    // Advance directly to Step 3
+                    setActiveStep(3);
+                }
+            } catch (e: any) {
+                console.error("Failed to confirm success on backend", e);
+                const errMsg = e.response?.data?.message || e.message || "Xác nhận thanh toán thất bại trên hệ thống. Vui lòng liên hệ hỗ trợ.";
+                setPaymentError(errMsg);
+            } finally {
+                setIsProcessing(false);
+            }
+        },
+        onCancel: () => {
+            console.log("PayOS onCancel: user cancelled payment");
+        }
+    });
+
+    const { open, exit } = usePayOS(payOSConfig);
+
+    // TryOpen Element-mount detection loop to solve React mounting race conditions
+    useEffect(() => {
+        if (payOSConfig.CHECKOUT_URL != null && activeStep === 2) {
+            let attempts = 0;
+            const tryOpen = () => {
+                const container = document.getElementById("embedded-payment-container");
+                if (container) {
+                    try {
+                        console.log("Found embedded container, opening PayOS iframe");
+                        open();
+                    } catch (e) {
+                        console.error("Failed to open PayOS iframe", e);
+                    }
+                } else if (attempts < 15) {
+                    attempts++;
+                    setTimeout(tryOpen, 100);
+                } else {
+                    console.error("Element #embedded-payment-container not found after 1.5s");
+                }
+            };
+            const timer = setTimeout(tryOpen, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [payOSConfig.CHECKOUT_URL, activeStep, open]);
+
+    // Cleanup PayOS exit handler on unmount
+    useEffect(() => {
+        return () => {
+            if (document.getElementById("embedded-payment-container")) {
+                try {
+                    exit();
+                } catch (e) {
+                    console.error("Cleanup PayOS exit failed", e);
+                }
+            }
         };
-        window.addEventListener('public-data-changed', handleDataChanged);
-        return () => window.removeEventListener('public-data-changed', handleDataChanged);
-    }, [passedState?.currentTrip?.id, selectedSeats.length]);
+    }, [exit]);
 
     const handleApplyPromo = () => {
         const cleanPromo = promoInput.trim().toUpperCase();
@@ -138,7 +241,8 @@ export const useCheckoutPage = () => {
         }
     };
 
-    const handleCheckout = (e?: React.FormEvent | React.MouseEvent) => {
+    // ── Step 1: Create Booking Action ──────────────────────────────────────────
+    const handleCreateBooking = async (e?: React.FormEvent | React.MouseEvent) => {
         if (e) e.preventDefault();
 
         // Validations
@@ -156,7 +260,6 @@ export const useCheckoutPage = () => {
 
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
-            // Scroll to form errors
             window.scrollTo({ top: 150, behavior: 'smooth' });
             return;
         }
@@ -164,30 +267,140 @@ export const useCheckoutPage = () => {
         setFormErrors({});
         setIsProcessing(true);
 
-        // Simulate booking API call with loading animation
-        setTimeout(() => {
-            const bookingCode = `DVN-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-            setIsProcessing(false);
-            
-            navigate(`/tuyen-duong/${currentTrip.id}/dat-cho-thanh-cong`, {
-                state: {
-                    bookingCode,
-                    fullName: fullName.trim(),
-                    phoneNumber: phoneNumber.trim(),
-                    email: email.trim(),
-                    selectedSeats,
-                    currentTrip,
-                    totalPaid: Math.max(0, baseTotal - appliedDiscount)
+        const requestData = {
+            userId: window.localStorage.getItem('user_id') || null,
+            tripId: currentTrip.id,
+            customerName: fullName.trim(),
+            customerPhone: phoneNumber.trim(),
+            customerEmail: email.trim(),
+            totalAmount: Math.max(0, baseTotal - appliedDiscount),
+            seats: (passedState as any)?.seatDetails?.map((s: any) => ({
+                seatId: s.seatId,
+                seatNumber: s.seatNumber,
+                price: s.price
+            })) || []
+        };
+
+        try {
+            const res = await bookingService.createBooking(requestData);
+            const booking = res.data.result || res.data.data;
+            if (booking) {
+                setCreatedBooking(booking);
+                if (bookingCacheKey) {
+                    window.sessionStorage.setItem(bookingCacheKey, JSON.stringify(booking));
                 }
+                setActiveStep(2);
+                window.scrollTo(0, 0);
+            } else {
+                alert("Đặt vé thất bại! Phản hồi trống từ máy chủ.");
+            }
+        } catch (err: any) {
+            console.error("Booking failed", err);
+            alert(err.response?.data?.message || err.message || "Đặt vé thất bại! Vui lòng thử lại.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // ── Step 2: Process payment link and render QR code directly inside Step 2 ──
+    const handleProcessPayment = async () => {
+        if (!createdBooking) return;
+        setIsProcessing(true);
+        setPaymentError(null);
+
+        try {
+            // Check if already paid first or if expired
+            const checkRes = await bookingService.getBookingByCode(createdBooking.bookingCode);
+            const latestBooking = checkRes.data.result || checkRes.data.data;
+            if (latestBooking) {
+                if (latestBooking.bookingStatus === 'CANCELLED' || latestBooking.bookingStatus === 'EXPIRED') {
+                    alert("Đặt vé đã hết hạn hoặc bị hủy trên hệ thống! Quay lại điền thông tin mới.");
+                    if (bookingCacheKey) {
+                        window.sessionStorage.removeItem(bookingCacheKey);
+                    }
+                    setCreatedBooking(null);
+                    setActiveStep(1);
+                    setIsProcessing(false);
+                    return;
+                }
+
+                if (latestBooking.paymentStatus === 'PAID' || latestBooking.bookingStatus === 'CONFIRMED') {
+                    // Already paid! Skip QR and move straight to Step 3
+                    latestBookingRef.current = latestBooking;
+                    setCreatedBooking(latestBooking);
+                    setActiveStep(3);
+                    setIsProcessing(false);
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error("Checking booking status before payment link creation failed", err);
+        }
+
+        // Cleanly exit any ongoing checkout embedded sessions if element exists
+        if (document.getElementById("embedded-payment-container")) {
+            try {
+                exit();
+            } catch (err) {
+                console.error("Failed to exit PayOS SDK", err);
+            }
+        }
+
+        try {
+            const payRes = await paymentService.createPaymentLink({
+                bookingId: createdBooking.id,
+                bookingCode: createdBooking.bookingCode,
+                amount: 10000, // Fixed 10,000₫ for testing ease
+                description: `Ve xe ${createdBooking.bookingCode}`
             });
-        }, 1200);
+            const payObj = payRes.data.result || payRes.data.data;
+            const checkoutUrl = payObj?.checkoutUrl;
+            
+            if (checkoutUrl) {
+                setPaymentUrl(checkoutUrl);
+                setPayOSConfig((oldConfig: any) => ({
+                    ...oldConfig,
+                    CHECKOUT_URL: checkoutUrl
+                }));
+                // Hide loading spinner after iframe mounts so the QR is completely visible
+                setTimeout(() => {
+                    const spinner = document.querySelector("#embedded-payment-container .loading-spinner-wrapper");
+                    if (spinner) {
+                        (spinner as HTMLElement).style.display = 'none';
+                    }
+                }, 1800);
+            } else {
+                alert("Không thể tạo cổng thanh toán PayOS. Vui lòng liên hệ nhà quản lý.");
+            }
+        } catch (payErr) {
+            console.error("Payment link creation failed", payErr);
+            alert("Không khởi tạo được cổng thanh toán PayOS.");
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handleNavigateRoutes = () => {
         navigate(ROUTES.ROUTES);
     };
 
+    // ── Resets the booking session and clears cache ──────────────────────────
+    const handleResetToStep1 = () => {
+        if (bookingCacheKey) {
+            window.sessionStorage.removeItem(bookingCacheKey);
+        }
+        setCreatedBooking(null);
+        setPaymentUrl('');
+        setPayOSConfig((oldConfig: any) => ({
+            ...oldConfig,
+            CHECKOUT_URL: null
+        }));
+        setActiveStep(1);
+        window.scrollTo(0, 0);
+    };
+
     return {
+        navigate,
         passedState,
         currentTrip,
         selectedSeats,
@@ -209,7 +422,14 @@ export const useCheckoutPage = () => {
         promoMessage,
         isProcessing,
         handleApplyPromo,
-        handleCheckout,
-        handleNavigateRoutes
+        handleCreateBooking,
+        handleProcessPayment,
+        handleResetToStep1,
+        handleNavigateRoutes,
+        paymentUrl,
+        createdBooking,
+        paymentError,
+        activeStep,
+        setActiveStep
     };
 };

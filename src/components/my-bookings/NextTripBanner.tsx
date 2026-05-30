@@ -8,7 +8,7 @@ interface NextTripBannerProps {
 export const NextTripBanner: React.FC<NextTripBannerProps> = ({ nextTrip, handleNavigateProfile }) => {
     return (
         <div
-            className="rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative overflow-hidden"
+            className="rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative overflow-hidden text-left"
             style={{
                 background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%)',
                 boxShadow: '0 8px 30px rgba(161,59,0,0.2)',
@@ -20,7 +20,7 @@ export const NextTripBanner: React.FC<NextTripBannerProps> = ({ nextTrip, handle
                 <span className="material-symbols-outlined text-[140px]">directions_bus</span>
             </div>
 
-            <div className="flex flex-col gap-2 z-10">
+            <div className="flex flex-col gap-2 z-10 text-left">
                 <div className="flex items-center gap-3 flex-wrap">
                     <span
                         className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
@@ -49,7 +49,7 @@ export const NextTripBanner: React.FC<NextTripBannerProps> = ({ nextTrip, handle
 
             <button
                 onClick={handleNavigateProfile}
-                className="z-10 w-full md:w-auto px-6 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95"
+                className="z-10 w-full md:w-auto px-6 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95 border-none cursor-pointer"
                 style={{
                     backgroundColor: 'var(--color-surface-container-lowest)',
                     color: 'var(--color-primary)',

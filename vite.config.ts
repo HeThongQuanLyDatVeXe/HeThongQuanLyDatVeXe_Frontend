@@ -8,12 +8,21 @@ export default defineConfig({
     // Enable code splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks — these rarely change and get cached by browser
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['react-router-dom'],
-          'vendor-axios': ['axios'],
-          'vendor-icons': ['@phosphor-icons/react'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('react/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('react-router')) {
+              return 'vendor-router';
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios';
+            }
+            if (id.includes('@phosphor-icons')) {
+              return 'vendor-icons';
+            }
+          }
         },
       },
     },

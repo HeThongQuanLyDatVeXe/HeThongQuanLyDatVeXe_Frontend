@@ -31,7 +31,7 @@ export const useBookingPage = () => {
       if (tripId) {
         Promise.all([
           publicTripService.getTripById(tripId),
-          publicTripService.getSeatMap(tripId).catch(() => ({ data: { result: null } }))
+          publicTripService.getSeatMap(tripId).catch(() => ({ data: { result: null } } as any))
         ]).then(async ([tripRes, seatMapRes]) => {
           const payload = tripRes.data.result || tripRes.data.data;
           const seatMapPayload = seatMapRes.data?.result || seatMapRes.data?.data;
