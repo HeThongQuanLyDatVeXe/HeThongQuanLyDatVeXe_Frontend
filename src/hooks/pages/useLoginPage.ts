@@ -48,7 +48,7 @@ export const useLoginPage = () => {
     } catch (err: unknown) {
       const code = getApiErrorCode(err);
       if (code === 1006) setError('Email chưa được xác minh. Vui lòng kiểm tra hộp thư.');
-      else if (code === 1007) setError('Tài khoản đã bị khóa.');
+      else if (code === 10013) setError('Tài khoản đã bị khóa.');
       else setError('Email hoặc mật khẩu không đúng.');
     } finally {
       setLoading(false);

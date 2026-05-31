@@ -67,6 +67,9 @@ export const useGoogleCallbackPage = () => {
                     if (apiCode === 1002) {
                         setError('Email này đã được đăng ký bằng phương thức khác.');
                         showError('Email này đã được đăng ký bằng phương thức khác (Vd: Mật khẩu).');
+                    } else if (apiCode === 10013) {
+                        setError('Tài khoản đã bị khóa.');
+                        showError('Tài khoản đã bị khóa.');
                     } else if (status === 400) {
                         setError('Mã xác thực đã hết hạn hoặc đã được dùng.');
                         showError('Mã xác thực đã hết hạn hoặc đã được dùng.');
