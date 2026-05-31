@@ -1,4 +1,4 @@
-const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
 // Accept both styles from .env: with or without "/api/v1" suffix.
 const normalizedApiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '');
