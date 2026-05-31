@@ -34,10 +34,8 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     const fromCity = currentTrip?.from || currentTrip?.route?.originCityName || '—';
     const toCity = currentTrip?.to || currentTrip?.route?.destinationCityName || '—';
     const vehType = currentTrip?.vehicleType || currentTrip?.vehicle?.vehicleTypeName || 'Giường nằm';
-    const tripPrice = currentTrip?.price ?? (currentTrip?.prices?.[0]?.finalPrice ?? currentTrip?.prices?.[0]?.basePrice ?? 200000);
-
     // Group seats by seatType
-    const seats = seatDetails?.length > 0 ? seatDetails : selectedSeats.map(s => ({ 
+    const seats: any[] = (seatDetails && seatDetails.length > 0) ? seatDetails : selectedSeats.map(s => ({ 
         seatNumber: s, 
         seatType: 'REGULAR', 
         price: baseTotal / (selectedSeats.length || 1) 

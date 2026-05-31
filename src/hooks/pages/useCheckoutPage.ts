@@ -72,11 +72,7 @@ export const useCheckoutPage = () => {
     });
 
     const latestBookingRef = useRef<any>(null);
-    const currentTripRef = useRef(currentTrip);
-    const selectedSeatsRef = useRef(selectedSeats);
-    const navigateRef = useRef(navigate);
     const createdBookingRef = useRef(createdBooking);
-    const baseTotalRef = useRef(baseTotal);
 
     useEffect(() => {
         const fetchLiveData = () => {

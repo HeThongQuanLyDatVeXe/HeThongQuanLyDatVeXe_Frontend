@@ -92,13 +92,13 @@ export const useAdminTripDetailPage = (id?: string) => {
         try {
             const res = await adminTripService.getTripBookings(id);
             const payload = res.data.result || res.data.data;
-            let dataArray = [];
+            let dataArray: any[] = [];
             if (Array.isArray(payload)) {
                 dataArray = payload;
-            } else if (payload && Array.isArray(payload.content)) {
-                dataArray = payload.content;
-            } else if (payload && Array.isArray(payload.data)) {
-                dataArray = payload.data;
+            } else if (payload && Array.isArray((payload as any).content)) {
+                dataArray = (payload as any).content;
+            } else if (payload && Array.isArray((payload as any).data)) {
+                dataArray = (payload as any).data;
             }
             setBookings(dataArray);
         } catch (err) {
