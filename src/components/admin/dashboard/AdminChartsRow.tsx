@@ -1,6 +1,56 @@
 import React from 'react';
+import type { DailyRevenue, VehicleShare } from '../../../hooks/pages/admin/useAdminDashboardPage';
 
-export const AdminChartsRow: React.FC = () => {
+interface AdminChartsRowProps {
+    dailyRevenues: DailyRevenue[];
+    vehicleDistribution: VehicleShare[];
+    loading?: boolean;
+}
+
+export const AdminChartsRow: React.FC<AdminChartsRowProps> = ({ 
+    dailyRevenues = [], 
+    vehicleDistribution = [], 
+    loading = false 
+}) => {
+    // Determine maximum revenue to scale the graph Y coordinates
+    const revenues = dailyRevenues.map(d => d.revenue);
+    const maxRevenue = Math.max(...revenues, 1); // fallback to 1 to prevent division by zero
+
+    // Grid scaling dimensions
+    const width = 800;
+    const height = 180;
+    const paddingBottom = 20;
+    const totalPoints = dailyRevenues.length || 30;
+
+    // Generate coordinates: X from 0 to 800, Y scaled based on maxRevenue
+    const points = dailyRevenues.map((item, idx) => {
+        const x = (idx * width) / (totalPoints - 1 || 1);
+        // Map Y from height-paddingBottom (0 revenue) to 10 (max revenue)
+        const y = height - paddingBottom - (item.revenue / maxRevenue) * (height - 30);
+        return { x, y };
+    });
+
+    // Build the SVG path strings
+    const pathLine = points.length > 0 
+        ? `M ${points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')}`
+        : '';
+        
+    const pathArea = points.length > 0 
+        ? `${pathLine} L ${width},${height} L 0,${height} Z`
+        : '';
+
+    // Mock last year comparison data
+    const lastYearPoints = points.map(p => ({
+        x: p.x,
+        y: Math.min(height - paddingBottom, p.y + (Math.sin(p.x / 40) * 15) + 10)
+    }));
+    
+    const lastYearLine = lastYearPoints.length > 0
+        ? `M ${lastYearPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')}`
+        : '';
+
+    // Render chart UI
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
             {/* Revenue Chart */}
@@ -11,66 +61,86 @@ export const AdminChartsRow: React.FC = () => {
                 <div className="flex justify-between items-start mb-10">
                     <div>
                         <h4
-                            className="text-xl font-semibold"
-                            style={{ fontFamily: 'Playfair Display, serif', color: '#1A1410' }}
+                            className="text-xl font-bold text-slate-800"
+                            style={{ fontFamily: 'Playfair Display, serif' }}
                         >
-                            Biểu đồ Doanh thu
+                            Biểu đồ doanh thu doanh nghiệp
                         </h4>
-                        <p className="text-stone-500 text-sm">30 ngày gần nhất (Triệu VND)</p>
+                        <p className="text-stone-400 text-xs mt-1">30 ngày gần nhất (Đơn vị: Triệu VND)</p>
                     </div>
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-4 text-xs font-semibold">
                         <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: '#F4600C' }} />
-                            <span className="text-stone-600">Năm nay</span>
+                            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#F4600C' }} />
+                            <span className="text-stone-600">Tháng này</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-full inline-block bg-stone-200" />
-                            <span className="text-stone-600">Năm ngoái</span>
+                            <span className="w-2.5 h-2.5 rounded-full inline-block bg-stone-200" />
+                            <span className="text-stone-400">Tháng trước</span>
                         </div>
                     </div>
                 </div>
 
                 {/* SVG Chart */}
-                <div className="relative h-[200px] w-full">
-                    <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#F4600C" stopOpacity="0.2" />
-                                <stop offset="100%" stopColor="#F4600C" stopOpacity="0" />
-                            </linearGradient>
-                        </defs>
-                        {/* Grid lines */}
-                        <line x1="0" x2="800" y1="50" y2="50" stroke="#F9F2EC" strokeWidth="1" />
-                        <line x1="0" x2="800" y1="100" y2="100" stroke="#F9F2EC" strokeWidth="1" />
-                        <line x1="0" x2="800" y1="150" y2="150" stroke="#F9F2EC" strokeWidth="1" />
-                        {/* Area fill */}
-                        <path
-                            d="M0,160 Q100,140 200,165 T400,120 T600,150 T800,100 L800,200 L0,200 Z"
-                            fill="url(#chartGradient)"
-                        />
-                        {/* Current year line */}
-                        <path
-                            d="M0,160 Q100,140 200,165 T400,120 T600,150 T800,100"
-                            fill="none"
-                            stroke="#F4600C"
-                            strokeWidth="2.5"
-                        />
-                        {/* Last year dashed */}
-                        <path
-                            d="M0,175 Q100,165 200,185 T400,155 T600,170 T800,145"
-                            fill="none"
-                            stroke="#E8D5C4"
-                            strokeWidth="2"
-                            strokeDasharray="5 4"
-                        />
-                    </svg>
-                    <div className="flex justify-between mt-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                        <span>01 Tháng 10</span>
-                        <span>10 Tháng 10</span>
-                        <span>20 Tháng 10</span>
-                        <span>30 Tháng 10</span>
+                {loading ? (
+                    <div className="h-[200px] flex items-center justify-center">
+                        <div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                     </div>
-                </div>
+                ) : (
+                    <div className="relative h-[200px] w-full">
+                        <svg className="w-full h-full" viewBox={`0 0 ${width} 200`} preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                                    <stop offset="0%" stopColor="#F4600C" stopOpacity="0.22" />
+                                    <stop offset="100%" stopColor="#F4600C" stopOpacity="0" />
+                                </linearGradient>
+                            </defs>
+                            {/* Grid lines */}
+                            <line x1="0" x2={width} y1="30" y2="30" stroke="#FDFBF9" strokeWidth="1" />
+                            <line x1="0" x2={width} y1="80" y2="80" stroke="#FDFBF9" strokeWidth="1" />
+                            <line x1="0" x2={width} y1="130" y2="130" stroke="#FDFBF9" strokeWidth="1" />
+                            <line x1="0" x2={width} y1="160" y2="160" stroke="#F9F2EC" strokeWidth="1" />
+                            
+                            {/* Area fill */}
+                            {pathArea && (
+                                <path
+                                    d={pathArea}
+                                    fill="url(#chartGradient)"
+                                />
+                            )}
+                            
+                            {/* Current year line */}
+                            {pathLine && (
+                                <path
+                                    d={pathLine}
+                                    fill="none"
+                                    stroke="#F4600C"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                />
+                            )}
+                            
+                            {/* Last year dashed */}
+                            {lastYearLine && (
+                                <path
+                                    d={lastYearLine}
+                                    fill="none"
+                                    stroke="#E8D5C4"
+                                    strokeWidth="1.5"
+                                    strokeDasharray="4 3"
+                                    opacity="0.7"
+                                />
+                            )}
+                        </svg>
+                        
+                        {/* Dates Labels */}
+                        <div className="flex justify-between mt-3 text-[9px] font-extrabold uppercase tracking-widest text-stone-400">
+                            <span>{dailyRevenues[0]?.dayLabel || 'Đầu tháng'}</span>
+                            <span>{dailyRevenues[Math.floor(totalPoints / 3)]?.dayLabel || '10 ngày'}</span>
+                            <span>{dailyRevenues[Math.floor(2 * totalPoints / 3)]?.dayLabel || '20 ngày'}</span>
+                            <span>{dailyRevenues[totalPoints - 1]?.dayLabel || 'Cuối tháng'}</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Vehicle distribution donut */}
@@ -79,47 +149,64 @@ export const AdminChartsRow: React.FC = () => {
                 style={{ border: '1px solid #E8D5C4' }}
             >
                 <h4
-                    className="text-xl font-semibold mb-1"
-                    style={{ fontFamily: 'Playfair Display, serif', color: '#1A1410' }}
+                    className="text-xl font-bold text-slate-800"
+                    style={{ fontFamily: 'Playfair Display, serif' }}
                 >
                     Phân bổ loại xe
                 </h4>
-                <p className="text-stone-500 text-sm mb-6">Thị phần theo phương tiện</p>
+                <p className="text-stone-400 text-xs mt-1 mb-6">Thị phần đội xe vận hành</p>
 
                 <div className="flex-1 flex flex-col items-center justify-center">
                     {/* Donut ring */}
                     <div className="relative w-36 h-36">
                         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
                             <circle cx="60" cy="60" r="48" fill="none" stroke="#f5f5f4" strokeWidth="16" />
-                            <circle
-                                cx="60" cy="60" r="48" fill="none" stroke="#F4600C" strokeWidth="16"
-                                strokeDasharray={`${0.58 * 301.6} ${301.6}`}
-                            />
-                            <circle
-                                cx="60" cy="60" r="48" fill="none" stroke="#FFB347" strokeWidth="16"
-                                strokeDasharray={`${0.32 * 301.6} ${301.6}`}
-                                strokeDashoffset={`-${0.58 * 301.6}`}
-                            />
+                            
+                            {/* Dynamically stack the segments */}
+                            {(() => {
+                                const dashArray = 301.6;
+                                let currentOffset = 0;
+                                return vehicleDistribution.map((item) => {
+                                    const pctVal = parseFloat(item.pct) || 0;
+                                    const length = (pctVal / 100) * dashArray;
+                                    const strokeOffset = currentOffset;
+                                    currentOffset -= length; // subtract to stack counterclockwise
+                                    
+                                    return (
+                                        <circle
+                                            key={item.label}
+                                            cx="60"
+                                            cy="60"
+                                            r="48"
+                                            fill="none"
+                                            stroke={item.color}
+                                            strokeWidth="16"
+                                            strokeDasharray={`${length.toFixed(1)} ${dashArray}`}
+                                            strokeDashoffset={strokeOffset.toFixed(1)}
+                                            className="transition-all duration-500 ease-out"
+                                        />
+                                    );
+                                });
+                            })()}
                         </svg>
+                        
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-2xl font-semibold" style={{ fontFamily: 'Playfair Display, serif' }}>42</span>
-                            <span className="text-[9px] uppercase font-bold text-stone-400">Xe chạy</span>
+                            <span className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Playfair Display, serif' }}>
+                                {vehicleDistribution.length || 0}
+                            </span>
+                            <span className="text-[9px] font-bold text-stone-400 tracking-wider uppercase">Loại xe</span>
                         </div>
                     </div>
 
                     {/* Legend */}
                     <div className="mt-6 w-full space-y-2.5">
-                        {[
-                            { label: 'Giường nằm', pct: '58%', color: '#F4600C' },
-                            { label: 'Limousine', pct: '32%', color: '#FFB347' },
-                            { label: 'Ghế ngồi', pct: '10%', color: '#e7e5e4' },
-                        ].map(({ label, pct, color }) => (
+                        {vehicleDistribution.map(({ label, pct, color }) => (
                             <div key={label} className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                    <span className="text-sm font-medium">{label}</span>
+                                    <span className="text-xs font-semibold text-slate-700">{label}</span>
                                 </div>
-                                <span className="text-sm font-bold">{pct}</span>
+                                <span className="text-xs font-extrabold text-[#F4600C]">{pct}</span>
                             </div>
                         ))}
                     </div>
