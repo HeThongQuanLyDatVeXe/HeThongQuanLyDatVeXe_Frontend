@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface Booking {
     id: string;
@@ -45,9 +46,9 @@ export const AdminRecentBookings: React.FC<AdminRecentBookingsProps> = ({ bookin
                 >
                     Vé đặt gần đây
                 </h4>
-                <button className="text-sm font-bold hover:underline" style={{ color: '#F4600C' }}>
+                <Link to="/admin/bookings" className="text-sm font-bold hover:underline" style={{ color: '#F4600C' }}>
                     Xem tất cả
-                </button>
+                </Link>
             </div>
             <div className="flex-1 overflow-x-auto">
                 <table className="w-full text-left">

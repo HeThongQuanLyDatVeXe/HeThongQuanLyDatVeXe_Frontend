@@ -8,40 +8,6 @@ import { AdminKPICards } from '../components/admin/dashboard/AdminKPICards';
 import { AdminChartsRow } from '../components/admin/dashboard/AdminChartsRow';
 import { AdminRecentBookings } from '../components/admin/dashboard/AdminRecentBookings';
 import { AdminHotRoutes } from '../components/admin/dashboard/AdminHotRoutes';
-import { AdminSystemActivity } from '../components/admin/dashboard/AdminSystemActivity';
-import { AdminQuickActions } from '../components/admin/dashboard/AdminQuickActions';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface ActivityItem {
-  time: string;
-  title: string;
-  subtitle: string;
-  color: string;
-}
-
-// ─── Static demo activities (replace with real logs as needed) ───────────────
-
-const ACTIVITY_ITEMS: ActivityItem[] = [
-  {
-    time:     '10:45 SA',
-    title:    'Cập nhật lịch trình tuyến Hà Nội - Sapa',
-    subtitle: 'Bởi quản trị viên Minh Hoàng',
-    color:    '#F4600C',
-  },
-  {
-    time:     '09:30 SA',
-    title:    'Hoàn tất đối soát doanh thu tháng 9',
-    subtitle: 'Hệ thống tự động thực hiện',
-    color:    '#22c55e',
-  },
-  {
-    time:     '08:15 SA',
-    title:    'Cảnh báo: Xe 29B-123.45 trễ chuyến',
-    subtitle: 'Tuyến Sài Gòn - Vũng Tàu',
-    color:    '#f87171',
-  },
-];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -117,12 +83,6 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 mb-8">
         <AdminRecentBookings bookings={recentBookings} />
         <AdminHotRoutes routes={hotRoutes} />
-      </div>
-
-      {/* ── Activity Timeline & Quick Actions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <AdminSystemActivity activities={ACTIVITY_ITEMS} />
-        <AdminQuickActions />
       </div>
     </AdminLayout>
   );
