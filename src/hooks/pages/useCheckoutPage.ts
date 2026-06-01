@@ -75,6 +75,11 @@ export const useCheckoutPage = () => {
     const createdBookingRef = useRef(createdBooking);
 
     useEffect(() => {
+        createdBookingRef.current = createdBooking;
+    }, [createdBooking]);
+
+
+    useEffect(() => {
         const fetchLiveData = () => {
             const tripId = currentTrip?.id || passedState?.currentTrip?.id;
             if (tripId && activeStep === 1) { // Only fetch live data if in step 1
