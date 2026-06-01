@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface Booking {
     id: string;
@@ -31,6 +31,16 @@ const StatusBadge: React.FC<{ status: Booking['status'] }> = ({ status }) => {
 };
 
 export const AdminRecentBookings: React.FC<AdminRecentBookingsProps> = ({ bookings }) => {
+    const navigate = useNavigate();
+
+    const handleViewAll = () => {
+        try {
+            navigate('/admin/bookings');
+        } catch (err) {
+            window.location.href = '/admin/bookings';
+        }
+    };
+
     return (
         <div
             className="lg:col-span-6 bg-white rounded-3xl shadow-sm overflow-hidden flex flex-col"
@@ -46,9 +56,13 @@ export const AdminRecentBookings: React.FC<AdminRecentBookingsProps> = ({ bookin
                 >
                     Vé đặt gần đây
                 </h4>
-                <Link to="/admin/bookings" className="text-sm font-bold hover:underline" style={{ color: '#F4600C' }}>
+                <button 
+                    onClick={handleViewAll} 
+                    className="text-sm font-bold hover:underline cursor-pointer" 
+                    style={{ color: '#F4600C', cursor: 'pointer' }}
+                >
                     Xem tất cả
-                </Link>
+                </button>
             </div>
             <div className="flex-1 overflow-x-auto">
                 <table className="w-full text-left">
