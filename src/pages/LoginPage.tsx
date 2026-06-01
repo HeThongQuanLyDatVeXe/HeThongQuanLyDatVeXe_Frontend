@@ -5,7 +5,11 @@ import { Alert } from '../components/common/Alert';
 import loginBgImage from '../assets/login1.jpg';
 
 import { FloatingInput } from '../components/common/FloatingInput';
+import { ENV } from '../configurations/env';
 export const LoginPage: React.FC = () => {
+
+  console.log('GOOGLE_CLIENT_ID:', ENV.GOOGLE_CLIENT_ID);
+
   const {
     ROUTES,
     email,
@@ -22,6 +26,8 @@ export const LoginPage: React.FC = () => {
     handleSubmit,
     handleNavigateRegister
   } = useLoginPage();
+
+  
 
   return (
     <div className="font-body text-on-background bg-background-light h-screen w-screen overflow-hidden flex">
