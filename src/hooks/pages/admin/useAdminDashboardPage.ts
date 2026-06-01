@@ -3,9 +3,6 @@ import { useAuth } from '../../../hooks/user-service/useAuth';
 import { adminUserService } from '../../../services/user-service/adminUserService';
 import { bookingService } from '../../../services/booking-service/bookingService';
 import { adminTripService } from '../../../services/trip-service/adminTripService';
-import type { UserResponse } from '../../../types/user-service/response/UserResponse';
-import type { BookingResponse } from '../../../services/booking-service/bookingService';
-import type { TripResponse } from '../../../types/trip-service/Trip';
 
 export type Period = 'today' | 'week' | 'month';
 
@@ -51,7 +48,6 @@ export interface VehicleShare {
 
 export const useAdminDashboardPage = () => {
   const { user } = useAuth();
-  const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('today');
 
@@ -66,57 +62,57 @@ export const useAdminDashboardPage = () => {
     const loadDashboardData = async () => {
       setLoading(true);
       try {
-        let fetchedUsers: UserResponse[] = [];
-        let fetchedBookings: BookingResponse[] = [];
-        let fetchedTrips: TripResponse[] = [];
+        let stats: any = {};
+        let totalUsers = 0;
+        let activeTripsCount = 0;
+        let fetchedBookings: any[] = [];
+        let fetchedTrips: any[] = [];
 
-        try {
-          const res = await adminUserService.getUsers();
-          fetchedUsers = res.data?.result || res.data?.data || [];
-        } catch (e) {
-          console.error("Failed to fetch users", e);
-        }
+        // Concurrently query backend services safely
+        await Promise.all([
+          bookingService.getDashboardStats()
+            .then(res => { stats = res.data?.result || {}; })
+            .catch(e => console.error("Stats API failed", e)),
+            
+          adminUserService.searchUsers({ size: 1 })
+            .then(res => { totalUsers = res.data?.result?.totalElements || res.data?.data?.totalElements || 0; })
+            .catch(e => console.error("Users API failed", e)),
+            
+          adminTripService.getAllTrips({ status: 'SCHEDULED', size: 1 })
+            .then(res => { activeTripsCount += res.data?.result?.totalElements || 0; })
+            .catch(e => console.error("Scheduled trips count failed", e)),
+            
+          adminTripService.getAllTrips({ status: 'BOARDING', size: 1 })
+            .then(res => { activeTripsCount += res.data?.result?.totalElements || 0; })
+            .catch(e => console.error("Boarding trips count failed", e)),
+            
+          adminTripService.getAllTrips({ status: 'ON_ROUTE', size: 1 })
+            .then(res => { activeTripsCount += res.data?.result?.totalElements || 0; })
+            .catch(e => console.error("On-route trips count failed", e)),
+            
+          bookingService.getAllBookings(undefined, undefined, 0, 5)
+            .then(res => { fetchedBookings = res.data?.result?.content || res.data?.result || []; })
+            .catch(e => console.error("Recent bookings API failed", e)),
+            
+          adminTripService.getAllTrips({ size: 100 })
+            .then(res => { fetchedTrips = res.data?.result?.content || res.data?.data?.content || []; })
+            .catch(e => console.error("Trips list API failed", e))
+        ]);
 
-        try {
-          const res = await bookingService.getAllBookings(undefined, undefined, 0, 1000);
-          fetchedBookings = res.data?.result?.content || res.data?.result || [];
-        } catch (e) {
-          console.error("Failed to fetch bookings", e);
-        }
+        // Select period-based revenue and tickets
+        const revenue = period === 'today' 
+          ? (stats.revenueToday || 0)
+          : period === 'week' 
+            ? (stats.revenueWeek || 0) 
+            : (stats.revenueMonth || 0);
 
-        try {
-          const res = await adminTripService.getAllTrips({ size: 1000 });
-          fetchedTrips = res.data?.result?.content || res.data?.data?.content || [];
-        } catch (e) {
-          console.error("Failed to fetch trips", e);
-        }
+        const seatsSoldCount = period === 'today'
+          ? (stats.ticketsToday || 0)
+          : period === 'week'
+            ? (stats.ticketsWeek || 0)
+            : (stats.ticketsMonth || 0);
 
-        setUsers(fetchedUsers);
-
-        // --- CALCULATIONS FOR REAL OPERATION KPI STATS ---
-        // 1. Filter bookings matching current Period
-        const now = new Date();
-        const bookingsInPeriod = fetchedBookings.filter(b => {
-          const bDate = new Date(b.createdAt);
-          const diffMs = now.getTime() - bDate.getTime();
-          const diffDays = diffMs / (1000 * 60 * 60 * 24);
-          
-          if (period === 'today') return diffDays <= 1;
-          if (period === 'week') return diffDays <= 7;
-          return diffDays <= 30; // month
-        });
-
-        // 2. Total revenue in period (from Paid or Confirmed bookings)
-        const confirmedBookings = bookingsInPeriod.filter(b => b.paymentStatus === 'PAID' || b.bookingStatus === 'CONFIRMED');
-        const revenue = confirmedBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-
-        // 3. Tickets sold (seat count in successful bookings)
-        const seatsSoldCount = confirmedBookings.reduce((sum, b) => sum + (b.seats?.length || 0), 0);
-
-        // 4. Running trips (Scheduled or Boarding/OnRoute today)
-        const activeTripsCount = fetchedTrips.filter(t => t.status === 'SCHEDULED' || t.status === 'BOARDING' || t.status === 'ON_ROUTE').length;
-
-        // 5. Build KPI Cards list
+        // Build KPI Cards list
         const calculatedKpis: DashboardKPICard[] = [
           {
             label: `Doanh thu (${PERIOD_LABELS[period]})`,
@@ -143,67 +139,16 @@ export const useAdminDashboardPage = () => {
           },
           {
             label: 'Người dùng hệ thống',
-            value: String(fetchedUsers.length),
+            value: String(totalUsers),
             icon: 'group',
-            trend: `${fetchedUsers.filter(u => u.status === 'ACTIVE').length} hoạt động`,
+            trend: 'Tải tức thời',
             trendUp: true
           }
         ];
         setKpiCards(calculatedKpis);
 
-        // --- CALCULATE HOT ROUTES ---
-        // Group confirmed seats by Route Name
-        const routeBookings: Record<string, { count: number; capacityCount: number }> = {};
-        
-        // Dictionary for trip lookup
-        const tripDict: Record<string, TripResponse> = {};
-        fetchedTrips.forEach(t => {
-          tripDict[t.id] = t;
-        });
-
-        confirmedBookings.forEach(b => {
-          const trip = tripDict[b.tripId];
-          const routeName = trip?.route?.name || (trip?.route ? `${trip.route.originCityName} → ${trip.route.destinationCityName}` : 'Tuyến đi nội bộ');
-          
-          if (!routeBookings[routeName]) {
-            routeBookings[routeName] = { count: 0, capacityCount: 0 };
-          }
-          routeBookings[routeName].count += (b.seats?.length || 1);
-        });
-
-        // Map and sort top 3 routes
-        const sortedHotRoutes: DashboardHotRoute[] = Object.entries(routeBookings)
-          .map(([name, stat]) => {
-            // Estimate a premium look Trips Per Week and Fill Rate
-            const mockTripsPerWeek = Math.floor(Math.random() * 40) + 40;
-            const mockFillRate = Math.min(98, Math.floor(80 + (stat.count * 1.5) % 18));
-            return {
-              rank: 0, // set later
-              name,
-              tripsPerWeek: mockTripsPerWeek,
-              fillRate: mockFillRate
-            };
-          })
-          .sort((a, b) => b.fillRate - a.fillRate)
-          .slice(0, 3)
-          .map((item, idx) => ({ ...item, rank: idx + 1 }));
-
-        // Fallback hot routes if DB has no bookings yet
-        if (sortedHotRoutes.length === 0) {
-          setHotRoutes([
-            { rank: 1, name: 'Sài Gòn → Đà Lạt', tripsPerWeek: 85, fillRate: 94 },
-            { rank: 2, name: 'Hà Nội → Hải Phòng', tripsPerWeek: 62, fillRate: 88 },
-            { rank: 3, name: 'Đà Nẵng → Hội An', tripsPerWeek: 120, fillRate: 82 }
-          ]);
-        } else {
-          setHotRoutes(sortedHotRoutes);
-        }
-
-        // --- MAP RECENT BOOKINGS ---
-        const mappedRecentBookings: DashboardBooking[] = fetchedBookings.slice(0, 5).map(b => {
-          const trip = tripDict[b.tripId];
-          const routeName = trip?.route?.name || (trip?.route ? `${trip.route.originCityName} → ${trip.route.destinationCityName}` : 'Vãng lai');
-          
+        // Build recent bookings with initials
+        const mappedRecentBookings: DashboardBooking[] = fetchedBookings.map((b: any) => {
           let dashboardStatus: 'success' | 'pending' | 'cancelled' = 'pending';
           if (b.paymentStatus === 'PAID' || b.bookingStatus === 'CONFIRMED') {
             dashboardStatus = 'success';
@@ -211,10 +156,12 @@ export const useAdminDashboardPage = () => {
             dashboardStatus = 'cancelled';
           }
 
-          // Initial characters
           const initials = b.customerName
-            ? b.customerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+            ? b.customerName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
             : 'KH';
+
+          const routeName = b.trip?.route?.name || 
+            (b.trip?.route ? `${b.trip.route.originCityName} → ${b.trip.route.destinationCityName}` : 'Vãng lai');
 
           return {
             id: b.bookingCode,
@@ -226,28 +173,17 @@ export const useAdminDashboardPage = () => {
         });
         setRecentBookings(mappedRecentBookings);
 
-        // --- CALCULATE LAST 30 DAYS REVENUE FOR GRAPH ---
-        const last30Days: DailyRevenue[] = [];
-        for (let i = 29; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(now.getDate() - i);
-          const dateStr = d.toISOString().split('T')[0];
-          
-          // Sum PAID bookings for this day
-          const dayConfirmed = fetchedBookings.filter(b => {
-            const isSuccess = b.paymentStatus === 'PAID' || b.bookingStatus === 'CONFIRMED';
-            return isSuccess && b.createdAt.startsWith(dateStr);
-          });
-          const daySum = dayConfirmed.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+        // Format daily revenues in Million VND for graph
+        const rawDaily = stats.dailyRevenues || [];
+        const dailyRevenuesFormatted = rawDaily.map((item: any) => ({
+          dayLabel: item.dayLabel || '',
+          revenue: (item.revenue || 0) / 1000000
+        }));
+        setDailyRevenues(dailyRevenuesFormatted);
 
-          const dayLabel = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-          last30Days.push({ dayLabel, revenue: daySum / 1000000 }); // value in Million VND
-        }
-        setDailyRevenues(last30Days);
-
-        // --- VEHICLE DISTRIBUTION CHART SHARE ---
+        // Calculate vehicle distribution from loaded trip slice
         const vehicleCount: Record<string, number> = {};
-        fetchedTrips.forEach(t => {
+        fetchedTrips.forEach((t: any) => {
           const vType = t.vehicle?.vehicleTypeName || 'Giường nằm';
           vehicleCount[vType] = (vehicleCount[vType] || 0) + 1;
         });
@@ -273,6 +209,13 @@ export const useAdminDashboardPage = () => {
           setVehicleDistribution(mappedVehicleShare);
         }
 
+        // Static hot routes
+        setHotRoutes([
+          { rank: 1, name: 'Sài Gòn → Đà Lạt', tripsPerWeek: 85, fillRate: 94 },
+          { rank: 2, name: 'Hà Nội → Hải Phòng', tripsPerWeek: 62, fillRate: 88 },
+          { rank: 3, name: 'Đà Nẵng → Hội An', tripsPerWeek: 120, fillRate: 82 }
+        ]);
+
       } catch (err) {
         console.error('Failed to compile admin stats', err);
       } finally {
@@ -285,7 +228,6 @@ export const useAdminDashboardPage = () => {
 
   return {
     user,
-    users,
     loading,
     period,
     setPeriod,

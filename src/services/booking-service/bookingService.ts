@@ -172,5 +172,12 @@ export const bookingService = {
       const rawData = res.data?.result || res.data?.data || res.data;
       return { data: { code: 200, result: rawData } as ApiResponse<any> };
     });
+  },
+
+  getDashboardStats() {
+    return bookingAxiosInstance.get<any>('/bookings/dashboard-stats').then(res => {
+      const rawData = res.data?.result || res.data?.data || res.data;
+      return { data: { code: 200, result: rawData } as ApiResponse<any> };
+    });
   }
 };
