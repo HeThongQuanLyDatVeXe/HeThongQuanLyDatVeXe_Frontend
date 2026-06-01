@@ -16,3 +16,7 @@ export const ENV = {
     GOOGLE_REDIRECT_URI: googleRedirectUri,
     GOOGLE_SCOPE: import.meta.env.VITE_GOOGLE_SCOPE || 'openid email profile',
 } as const;
+
+
+console.log('GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+console.log('ALL ENV:', import.meta.env);
