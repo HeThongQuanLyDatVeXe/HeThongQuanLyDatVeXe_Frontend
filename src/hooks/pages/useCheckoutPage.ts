@@ -236,10 +236,12 @@ export const useCheckoutPage = () => {
                             setCreatedBooking(null);
                             setActiveStep(1);
                         } else if (latestBooking.paymentStatus === 'PAID' || latestBooking.bookingStatus === 'CONFIRMED') {
-                            console.log("Cached booking is already PAID. Directing to Step 3.");
-                            latestBookingRef.current = latestBooking;
-                            setCreatedBooking(latestBooking);
-                            setActiveStep(3);
+                            console.log("Cached booking is already PAID. Clearing cache and resetting to Step 1.");
+                            if (bookingCacheKey) {
+                                window.sessionStorage.removeItem(bookingCacheKey);
+                            }
+                            setCreatedBooking(null);
+                            setActiveStep(1);
                         } else {
                             console.log("Cached booking is unpaid and valid. Restoring Step 2.");
                             setCreatedBooking(latestBooking);
